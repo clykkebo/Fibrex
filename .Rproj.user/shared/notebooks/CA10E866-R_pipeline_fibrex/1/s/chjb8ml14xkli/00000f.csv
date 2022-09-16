@@ -1,0 +1,6 @@
+"0","# Reformat tables to create one common table
+colnames(wuf.nmds.tab)[1:5] <- c(""Axis.1"",""Axis.2"",""Axis.3"",""Axis.4"",""Axis.5"")
+"
+"2","Error in colnames(wuf.nmds.tab)[1:5] <- c(""Axis.1"", ""Axis.2"", ""Axis.3"",  : 
+  object 'wuf.nmds.tab' not found
+"

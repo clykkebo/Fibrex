@@ -1,0 +1,7 @@
+"0","# Check which, if any columns, are in both tables
+colnames(tmp)[colnames(tmp) %in% colnames(meta)]
+"
+"1","[1]"
+"1"," ""type"""
+"1","
+"

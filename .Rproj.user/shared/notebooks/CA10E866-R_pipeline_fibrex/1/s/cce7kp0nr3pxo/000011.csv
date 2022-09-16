@@ -1,0 +1,6 @@
+"0","# Create sample ID variable and use it as sample_names
+sample_data(phy)$ID <- sample_names(phy)
+"
+"2","Error in h(simpleError(msg, call)) : 
+  fejl under evaluering af argument 'physeq' under valg af metode for funktion 'sample_names': object 'phy' not found
+"

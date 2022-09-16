@@ -1,0 +1,9 @@
+"0","# Samples to remove
+sample_data(phy)[sample_sums(phy) < min.reads,]
+"
+"1","Sample Data:        [3 samples by 23 sample variables]:"
+"1","
+"
+"2","Error in tempfile(pattern = ""_rs_rdf_"", tmpdir = outputFolder, fileext = "".rdf"") : 
+  temporary name too long
+"

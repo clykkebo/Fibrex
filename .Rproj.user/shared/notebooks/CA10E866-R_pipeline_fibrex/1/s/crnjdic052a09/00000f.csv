@@ -1,0 +1,6 @@
+"0","# Test if any difference is significant (if not significant the batch effect should be negligible)
+chisq_test(freq.t)
+"
+"2","Error in tempfile(pattern = ""_rs_rdf_"", tmpdir = outputFolder, fileext = "".rdf"") : 
+  temporary name too long
+"

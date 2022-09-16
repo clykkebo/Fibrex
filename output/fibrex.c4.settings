@@ -1,0 +1,51 @@
+##############################################################################
+###                          DEMULTIPLEX SETTINGS                          ###
+##############################################################################
+
+	INPUT:
+		Run name: c4
+		Fastq file: /mnt/c/project_data/02_fibrex/R_2022_08_26_11_15_12_user_GSS5-0533-103-Claus_Lykkebo_26082022.fastq
+		Index file: ../DB/Indeces.fasta
+	OUTPUT:
+		Fastq files: c4_fastq
+		Trimming report: output/c4.cutadapt_report.txt
+		Fastqc report: output/c4_fastqc.html
+	SETTINGS:
+		Forward index: CCTACGGGAGGCAGCAG
+		Reverse index: CCAGCAGCCGCGGTAAT
+		Minimun read length: 110
+		Maximum read length: 180
+
+##############################################################################
+###                           RENAMING SETTINGS                            ###
+##############################################################################
+
+	INPUT:
+		Run name: c4
+		Project name: fibrex
+		Sample file: c4_tags.tsv
+	OUTPUT:
+		Fastq files: fibrex_fastq
+
+##############################################################################
+###                             DADA2 SETTINGS                             ###
+##############################################################################
+
+	FOLDERS:
+		Output: output
+		Filtered fastq: ./filtered
+		Reference DB: ../DB
+	ADVANCED:
+		Truncations length: 0 (The position at which to truncate reads. Reads shorter than truncLen will be discarded.)
+		trimLeft: 0 (The number of nucleotides to remove from the start of each read)
+		Maximum expected error (maxEE): 2 (Reads with expected errors higher than maxEE are discarded)
+		Truncation quality (truncQ): 2 (Reads are truncated at the first instance of quality score truncQ If the read is then shorter than truncLen, it is discarded.)
+		Maximum read length (maxLen): 2 (Remove reads with length greater than maxLen. maxLen is enforced on the raw reads.)
+		Method for pooling (poolMethod): 2 (The method used to pool (or not) samples during denoising)
+		Method to remove Chimera (chimeraMethod): 2 (The method used to remove chimeras.)
+		Fold difference before testing for chimera (minParentFold): 2 (The minimum abundance of potential 'parents' of a sequence being tested as chimeric, expressed as a fold-change versus the abundance of the sequence being tested)
+		Number of threads used (nthreads): 2 (Special values: 0 - detect available cores and use all except one)
+		Number of reads used to learn the error model from. (nreads_learn): 2 (Special values: 0 - Use all input reads.)
+		Homopolymer gap penalty (HOMOPOLYMER_GAP_PENALTY): 2 (The cost of gaps in homopolymer regions (>=3 repeated bases). Default is -1)
+		Band size (BAND_SIZE): 2 (When set, banded Needleman-Wunsch alignments are performed. The default value of BAND_SIZE is 32. Setting BAND_SIZE to a negative number turns off banding (i.e. full Needleman-Wunsch).)
+

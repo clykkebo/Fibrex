@@ -1,0 +1,5 @@
+"0","aggregate(Abundance~type+contaminant, data = contam.prc, FUN = mean)
+"
+"2","Error in tempfile(pattern = ""_rs_rdf_"", tmpdir = outputFolder, fileext = "".rdf"") : 
+  temporary name too long
+"

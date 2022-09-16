@@ -1,0 +1,20 @@
+"0","## If significant:
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  wilcox_test(Shannon ~ Run) %>%
+  adjust_pvalue(method = ""BH"") %>%
+  add_significance(""p.adj"") %>% 
+  add_x_position(x = ""Run"") %>%
+  p_format(""p.adj"", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+"
+"1","[1m[33mError[39m in [38;5;254m`vec_as_location2_result()`[39m:[22m
+[33m![39m Can't extract columns that don't exist.
+[31m✖[39m Column `Run` doesn't exist.
+Backtrace:
+[90m  1. [39m... %>% ...
+[90m 18. [39m[1mdplyr[22m:::pull.data.frame(., !!group)
+[90m 19. [39m[1mtidyselect[22m::vars_pull(names(.data), !!enquo(var))
+[90m 20. [39mtidyselect:::pull_as_location2(loc, n, vars)
+[90m 29. [39m[1mvctrs[22m::vec_as_location2(i, n = n, names = names, arg = ""var"")
+[90m 31. [39mvctrs:::vec_as_location2_result(...)
+"
