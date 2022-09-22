@@ -1,7 +1,0 @@
-"0","plot(batch.bdisp)
-"
-"2","Advarsel: unable to open file 'O:/GutMicro/Tarmmikrobiologi gruppen - Gut Ecology group/Personal folders/Claus A Lykkebo/Animal experiments/Gutmicro-B-02-22 Fibrex/01_16S sequencing/.Rproj.user/shared/notebooks/CA10E866-R_pipeline_fibrex/1/980C023E1C3161BC/ctr5a776huvmf_t/_rs_chunk_plot_001.png' for writing"
-"2","Advarsel: opening device failed"
-"2","Error in (function (filename = ""Rplot%03d.png"", width = 480, height = 480,  : 
-  kan ikke starte png()-enhed
-"

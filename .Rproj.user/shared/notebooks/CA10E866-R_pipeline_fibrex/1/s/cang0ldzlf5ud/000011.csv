@@ -1,7 +1,0 @@
-"0","# If any other columns than ID is in both, consider if you want it removed or renamed
-colnames(meta)[which(colnames(meta) == ""type"")]
-"
-"1","[1]"
-"1"," ""type"""
-"1","
-"

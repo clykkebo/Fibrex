@@ -294,7 +294,7 @@ Next step is to load the metadata for the project. This step will have to be edi
 # export sample data
 tmp <- data.frame(sample_data(phy))
 # Load metadata - This part will be specific to the project
-meta <- read.csv("metadata.csv", header = T)
+meta <- read.csv("metadata.csv", header = T, sep = ";")
 
 meta$sampleID[grepl("MOCK",meta$sampleID)] <- str_replace(meta$sampleID[grepl("MOCK",meta$sampleID)], "MOCK","Mock")
 
@@ -636,7 +636,7 @@ The rarefaction curves can be plottet for each sample by some other variable. Re
 load("R_objects/Rare_dat.RData")
 
 # plot per sample
-ggplot(Rdat.m, aes(x = depth, y = Alpha_diversity, color = Run)) + 
+ggplot(Rdat.m, aes(x = depth, y = Alpha_diversity, color = plate_run)) + 
   geom_smooth(aes(group = Sample), se = FALSE) + 
   facet_wrap("Index", scales = "free") + 
   #scale_x_log10() + 
