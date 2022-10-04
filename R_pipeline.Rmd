@@ -12,47 +12,44 @@ knit: (function(inputFile, encoding) {
     rmarkdown::render(
         inputFile, encoding = encoding,
         output_dir = file.path(dirname(inputFile),"output"),
-        output_file = paste0("CEFTA_", Sys.Date(), '.html')) 
+        output_file = paste0("MicrobiomeAnalysis_", Sys.Date(), '.html')) 
     })
+bibliography: references.bib
+link-citations: true
+params:
+    input: "input/full.phyloseq_object.RData"
+    meta: "input/CEFTA_metadata.csv"
+    neg: "Water|Neg|NC|ctrl"
+    batch: "Run"
 ---
 
 # GMH ASV ANALYSIS PIPELINE
 
 This Rmarkdown contains the commands necessary to perform initial analyses of the output from the DF_GMH_PIPELINE There will be things that should be updated to fit the exact project. It is important that metadata is loaded correctly and it should contain a variable identifying negative controls and mock samples. I recommend visiting the ["Analysis of community ecology data in R"](https://www.davidzeleny.net/anadat-r/doku.php/en:start) to read about the theory behind the alpha and beta diversity and examples of the necessary R-code to execute them. For analyses of differential abundance I will use the DAtest package [(Russel et al., 2018)](https://www.biorxiv.org/content/10.1101/241802v1). Another excellent source of help is the R [cheat-sheets](https://www.rstudio.com/resources/cheatsheets/).
 
-```{r setup, eval=TRUE, echo=TRUE, message=FALSE}
+```{r setup, eval=TRUE, echo=TRUE, message=FALSE,warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 
 # Load libraries
-knitr::opts_chunk$set(echo = TRUE)
-suppressWarnings(library(tidyverse))
-suppressWarnings(library(phyloseq))
-suppressWarnings(library(decontam))
-suppressWarnings(library(pals))
-suppressWarnings(library(ggpubr))
-suppressWarnings(library(rstatix))
-suppressWarnings(library(vegan))
-suppressWarnings(library(reshape2))
-suppressWarnings(library(DAtest))
-suppressWarnings(library(ape))
+library(tidyverse)
+library(phyloseq)
+library(decontam)
+library(pals)
+library(ggpubr)
+library(rstatix)
+library(vegan)
+library(reshape2)
+library(DAtest)
+library(ape)
+library(kableExtra)
 
 # Create used folders if missing
 if (!file.exists("R_objects")) dir.create(file.path(getwd(), "R_objects"))
 if (!file.exists("plots")) dir.create(file.path(getwd(), "plots"))
 if (!file.exists("tables")) dir.create(file.path(getwd(), "tables"))
+if (!file.exists("scripts")) dir.create(file.path(getwd(), "scripts"))
 
-# Print package versions
-cat("PACKAGES USED IN THIS PIPELINE:\n",
-    "tidyverse:", as.character(packageVersion("tidyverse")), "|",
-    "phyloseq:", as.character(packageVersion("phyloseq")), "|",
-    "reshape2:", as.character(packageVersion("reshape2")), "|",
-    "decontam:", as.character(packageVersion("decontam")), "\n",
-    "DAtest:", as.character(packageVersion("DAtest")), "|",
-    "pals:", as.character(packageVersion("pals")), "|",
-    "ggpubr:", as.character(packageVersion("ggpubr")), "|",
-    "rstatix:", as.character(packageVersion("rstatix")), "|",
-    "ape:", as.character(packageVersion("ape")), "|",
-    "vegan", as.character(packageVersion("vegan")), "\n")
-
+saveRDS(params, "R_objects/params.RDS")
 ```
 
 ## SCRIPTS {.tabset .tabset-fade .tabset-pills}
@@ -135,7 +132,7 @@ invisible(gc()) #free up memory and report the memory usage.
 
 ### ALPHA DIVERSITY
 
-Alpha diversity is sensitive to sequencing depth, especially richness based metrics will increase with sequencing depth. To avoid any such bias rarefaction should be performed. Rarefaction 
+Alpha diversity is sensitive to sequencing depth, especially richness based metrics will increase with sequencing depth. To avoid any such bias rarefaction should be performed. Rarefaction
 
 ```{r Alpha_diversity_functions, eval=TRUE, echo=TRUE}
 
@@ -262,24 +259,118 @@ invisible(gc()) #free up memory and report the memory usage.
 
 ```
 
+### FILTER TAXA
+
+These functions are used to merge ASV that are not one of the most abundant, or below a defined threshold, into "Other"
+
+```{r merge_taxa_scripts, eval=TRUE, echo=TRUE}
+
+# This function merges anything not in the top (10 by default) most abundant ASVs
+merge_less_than_top <- function(pobject, top=10){
+  # transform to sample counts to relative values
+  transformed <- transform_sample_counts(pobject, function(x) x/sum(x))
+
+    # Orientate and export otu table
+  if (taxa_are_rows(transformed)) otu.table <- as.data.frame(otu_table(transformed)) else otu.table <- as.data.frame(t(otu_table(transformed)))
+  
+  # sort otu table by decreasing abundance
+  otu.sort <- otu.table[order(rowMeans(otu.table), decreasing = TRUE),]
+  
+  # Create list of ASVs to merge
+  otu.list <- row.names(otu.sort[(top+1):nrow(otu.sort),])
+  
+  # perform the merger with the original sample counts
+  merged <- merge_taxa(pobject, otu.list, 1)
+  
+  # change the taxa name
+  taxa_names(merged)[taxa_names(merged) %in% otu.list[1]] <- "Other"
+  
+  # change taxa to "Other" for all levels not being NAs
+  for (i in 1:ncol(tax_table(merged))){
+    if (sum(!is.na(tax_table(merged)[,i]))){
+      tax_table(merged)["Other",i] <- "Other"
+    }
+  }
+  return(merged)
+}
+
+# This function merges ASVs that are below a defined ratio, with the default being 0.001 (0.1%)
+merge_low_abundance <- function(pobject, threshold=0.001){
+  # transform to sample counts to relative values
+  transformed <- transform_sample_counts(pobject, function(x) x/sum(x))
+  
+  # Orientate and export otu table
+  if (taxa_are_rows(transformed)) otu.table <- as.data.frame(otu_table(transformed)) else otu.table <- as.data.frame(t(otu_table(transformed)))
+  
+  # Create list of ASVs to merge
+  otu.list <- row.names(otu.table[rowMeans(otu.table) < threshold,])
+
+  # perform the merger with the original sample counts
+  merged <- merge_taxa(pobject, otu.list, 1)
+  
+  # change the taxa name
+  taxa_names(merged)[taxa_names(merged) %in% otu.list[1]] <- "Other"
+  
+  # change taxa to "Other" for all levels not being NAs
+  for (i in 1:ncol(tax_table(merged))){
+    if (sum(!is.na(tax_table(merged)[,i]))){
+      tax_table(merged)["Other",i] <- "Other"
+    }
+  }
+  return(merged)
+}
+
+merge_prevalence <- function(pobject, variable, min.samples){
+  # transform to sample counts to relative values
+  if (taxa_are_rows(transformed)) otu.table <- as.data.frame(otu_table(transformed)) else otu.table <- as.data.frame(t(otu_table(transformed)))
+  
+  # make binary
+  otu.table[otu.table != 0] <- 1
+  
+  # extract metadata
+  dat <- data.frame(sample_data(pobject))
+  
+  # set groups
+  vgroup <- unique(dat[,variable])
+  
+  # create count table
+  counts <- data.frame(row.names = row.names(otu.table))
+  for (seq(length(vgroup))) counts[,vgroup[i]] <- rowSums(otu.table[,dat[,variable]==vgroup[i]])
+  
+  counts$keep <- ifelse
+  
+    # Orientate and export otu table
+  if (taxa_are_rows(transformed)) otu.table <- as.data.frame(otu_table(transformed)) else otu.table <- as.data.frame(t(otu_table(transformed)))otu_all <- 
+  
+}
+# save functions
+save(merge_less_than_top, merge_low_abundance, file = "scripts/merge_abundance.Rdata")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
+invisible(gc()) #free up memory and report the memory usage.
+
+```
+
 # IMPORT AND QC
 
 This section will import the ASV data, add metadata, and run decontam
 
 ## PIPELINE DATA
 
-First step is to load the output from the pipeline. The only part of this section that should be edited is the "grepl" commands in line 43 and 47 to ensure that negative controls and mock samples are properly identified
+First step is to load the output from the pipeline. The only part of this section that should be edited is the "grepl" commands to ensure that negative controls and mock samples are properly identified
 
 ```{r Load_pipeline_data, eval = TRUE}
+params <- readRDS("R_objects/params.RDS")
 # Load analysis data
-load("output/full.phyloseq_object.RData")
+load(params$input)
 
 # Create sample ID variable and use it as sample_names
 sample_data(phy)$ID <- with(sample_data(phy), paste(Run,Sample, sep = "_"))
 sample_names(phy) <- sample_data(phy)$ID
 
 # Create variables identifying negative controls. If negative controls are named differently update this option, "|" can be used to list more options
-sample_data(phy)$is.neg <- grepl("Water|Neg|NC|ctrl",sample_data(phy)$Sample,ignore.case = TRUE)
+sample_data(phy)$is.neg <- grepl(params$neg,sample_data(phy)$Sample,ignore.case = TRUE)
 
 # Create variables identifying sample types.Remember to update if Mock samples samples are named differently
 sample_data(phy)$type <- ifelse(sample_data(phy)$is.neg, "Control",
@@ -298,13 +389,14 @@ Next step is to load the metadata for the project. This step will have to be edi
 tmp <- data.frame(sample_data(phy))
 
 # Load metadata - This part will be specific to the project
-meta <- read.csv("CEFTA_metadata.csv", header = T)
+meta <- read.csv(params$meta, header = T)
 
 # Create an identical ID variable to use for merging
 meta$ID <- with(meta, paste(Run,Sample_ID, sep = "_"))
 
 # Verify that all the IDs are identical between the datasets
 nrow(tmp[!tmp$ID %in% meta$ID,])
+tmp[!tmp$ID %in% meta$ID,]
 nrow(meta[!meta$ID %in% tmp$ID,])
 
 # Check which, if any columns, are in both tables
@@ -340,7 +432,7 @@ invisible(gc()) #free up memory and report the memory usage.
 Many ASVs lacks species level, or higher, classification. Later steps will use the taxonomic annotation at various levels and some will remove taxa without classification. To avoid data being removed it is necessary to replace missing values with relevant information, this will be the highest available classification. At the same time, ASVs that could not be classified to Phylum or even Kingdom level is likely to be sequencing artifacts and will be removed. For some analyses it might be relevant to only include taxa that has been properly classified, so the level at which unclassified taxa are removed can be modified.
 
 ```{r Clean_taxa, eval = FALSE}
-################################################################################
+params <- readRDS("R_objects/params.RDS")
 # load data 
 load("R_objects/input.Rdata")
 
@@ -361,14 +453,14 @@ invisible(gc()) #free up memory and report the memory usage.
 
 ## DECONTAMINATE {.tabset .tabset-fade .tabset-pills}
 
-This section runs decontam to remove likely contaminants from the dataset. The decontamination should be performed as harshly as makes sense for each specific project, but I suggest using the percent of reads removed as an indicator of what harshness is appropriate. If the project contains samples from multiple batches or runs this information should be included using the "batch" variable. How the contaminants from each batch is combined is defined using the variable "batch.combine": - "minimum" = The minimum batch probabilities is used to identify contaminants - "product" = The product of the batch probabilities is used to identify contaminants - "fisher" = The batch probabilities are combined with Fishers method and used to identify contaminants Decontam can identify contaminants based on the initial DNA concentration (frequency) and/or based on prevalence in samples and controls. Frequency based decontam assumes a negative correlation between DNA concentration and contaminant abundance. Prevalence based decontam assumes higher abundance of contaminants in controls. As for batches, the two methods can be used separately or combined. The variable "method" defines how decontam will run.
+This section runs decontam to remove likely contaminants from the data set [@decontam]. The decontamination should be performed as harshly as makes sense for each specific project, but I suggest using the percent of reads removed as an indicator of what harshness is appropriate. If the project contains samples from multiple batches or runs this information should be included using the "batch" variable. How the contaminants from each batch is combined is defined using the variable "batch.combine": - "minimum" = The minimum batch probabilities is used to identify contaminants - "product" = The product of the batch probabilities is used to identify contaminants - "fisher" = The batch probabilities are combined with Fishers method and used to identify contaminants Decontam can identify contaminants based on the initial DNA concentration (frequency) and/or based on prevalence in samples and controls. Frequency based decontam assumes a negative correlation between DNA concentration and contaminant abundance. Prevalence based decontam assumes higher abundance of contaminants in controls. As for batches, the two methods can be used separately or combined. The variable "method" defines how decontam will run.
 
 ### SINGLE SETTING
 
 Use this option if: - Either initial DNA concentration OR negative controls variable is available in the sample metadata AND - The samples have been processed and sequenced in one batch
 
 ```{r Decontam_single, eval = FALSE}
-################################################################################
+params <- readRDS("R_objects/params.RDS")
 # load data 
 load("R_objects/cleaned.Rdata")
 df <- data.frame(sample_data(phy))
@@ -447,10 +539,10 @@ Cleaned phyloseq object saved in: "R_objects/Decontam.Rdata"
 
 Use this option if: - The initial DNA concentration AND negative controls variable is available in the sample metadata OR - The samples have been extracted and/or sequenced in multiple batches/runs (if samples has been processed in multiple batches, each with their own controls, this can be set as batches as well)
 
-> The included code is for both types of decontam and batches, delete lines as needed
-> THIS SECTION MIGHT FAIL WHILE KNITTING (MEMORY INTENSIVE)
+> The included code is for both types of decontam and batches, delete lines as needed THIS SECTION MIGHT FAIL WHILE KNITTING (MEMORY INTENSIVE)
 
 ```{r decontam_multiple, eval = FALSE}
+params <- readRDS("R_objects/params.RDS")
 # load data 
 load("R_objects/cleaned.Rdata")
 
@@ -503,13 +595,27 @@ prc.m <- merge(prc.melt, contam.long, by.y = "ASV", by.x = "OTU", all = TRUE)
 
 # Aggregate and plot
 prc.agg <- aggregate(Abundance ~ Sample+type+Method+Contaminant, data = prc.m, FUN = sum)
-ggplot(prc.agg[prc.agg$Contaminant,], aes(x = type, y = Abundance,color = Method)) +
+decontam.plot <- ggplot(prc.agg[prc.agg$Contaminant,], aes(x = type, y = Abundance,color = Method)) +
   geom_boxplot()  +
   scale_color_manual(values=unname(pals::polychrome(n=length(unique(prc.agg$Method)))))
-suppressMessages(ggsave("plots/contaminant_fraction_multiple.pdf"))
+suppressMessages(ggsave(decontam.plot,"plots/contaminant_fraction_multiple.pdf"))
 
-aggregate(Abundance~Method+type, data = prc.agg[prc.agg$Contaminant,], FUN = mean)
+```
 
+```{r Decontam_plot, eval=TRUE,echo=TRUE,fig.cap="Abundance of ASVs classified as contaminants"}
+
+# output plot 
+knitr::include_graphics("plots/contaminant_fraction_multiple.pdf")
+
+```
+
+```{r Mock_plot, eval=TRUE,echo=TRUE,fig.cap="Comparison of sequenced mock communities"}
+
+# output plot 
+knitr::include_graphics("plots/mock_comparison.pdf")
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
 # Evaluate what you can agree to loose and then use that column. I will use the minimum.minimum
 phy.harsh <- prune_taxa(contam.df$ASV[contam.df$combined.product == FALSE], phy)
 phy <- prune_taxa(contam.df$ASV[contam.df$minimum.minimum == FALSE], phy)
@@ -540,6 +646,7 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 
 ```
+
 Cleaned phyloseq object saved in: "R_objects/Decontam.Rdata"
 
 ## TEST MOCK
@@ -547,6 +654,7 @@ Cleaned phyloseq object saved in: "R_objects/Decontam.Rdata"
 Here we test how the mock community looks compared to the expected abundance. While there might be some differences from the expected mock community, the important part is that mock communities are consistent across runs.
 
 ```{r Mock, eval = TRUE}
+params <- readRDS("R_objects/params.RDS")
 # load data
 load("R_objects/Decontam.Rdata")
 # Subset mocks
@@ -572,11 +680,18 @@ mock.clean <- mock[,c("Sample","Abundance","Family_clean")]
 mock.clean <- rbind(mock.clean,mock.org)
 
 # Create plots
-ggplot(mock.clean, aes(Sample, Abundance, fill = Family_clean, color = Family_clean)) + 
+mock.plot <- ggplot(mock.clean[!grepl("94",mock.clean$Sample),], aes(Sample, Abundance, fill = Family_clean, color = Family_clean)) + 
   geom_col(position = "fill") + coord_flip() +
   scale_fill_manual(values=unname(pals::polychrome(n=length(unique(mock.clean$Family_clean))))) + 
   scale_color_manual(values=unname(pals::polychrome(n=length(unique(mock.clean$Family_clean)))))
-suppressMessages(ggsave("plots/mock_comparison.pdf"))
+suppressMessages(ggsave(mock.plot, "plots/test_mock_comparison.pdf"))
+
+```
+
+```{r Mock_plot, eval=TRUE,echo=TRUE,fig.cap="Comparison of sequenced mock communities"}
+
+# output plot 
+knitr::include_graphics("plots/mock_comparison.pdf")
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE))
 invisible(gc())
@@ -590,6 +705,7 @@ Mock looks fine
 After using decontaminate it is time to evaluate the samples based on the metadata and remove unwanted samples
 
 ```{r clean_meta, eval=TRUE, echo=TRUE}
+params <- readRDS("R_objects/params.RDS")
 # load data
 load("R_objects/Decontam.Rdata")
 
@@ -623,6 +739,7 @@ There is randomness involved in performing rarefaction (random subsampling). To 
 As this is used to assess the sequencing depth to use for the actual rarefaction fewer rarefactions is acceptable. Default maxdepth is set to the highest sequencing depth, but a lower value can be set. Here I will use the quantile function to look at the distribution of sequencing depths and then set it at the 90th quantile
 
 ```{r rare_curve_calc, eval = FALSE}
+params <- readRDS("R_objects/params.RDS")
 # load
 load("R_objects/Phyloseq.Rdata")
 load("scripts/adiv.Rdata")
@@ -656,7 +773,8 @@ invisible(gc()) #free up memory and report the memory usage.
 
 The rarefaction curves can be plottet for each sample by some other variable. Remember that the mock samples are expected to be very different. Also when grouping by other than sample there might be large changes when passing the actual sequencing depth of individual samples.
 
-```{r rare_curve_plot, eval = TRUE, echo = TRUE}
+```{r rare_curve_plot, eval = FALSE, echo = TRUE}
+params <- readRDS("R_objects/params.RDS")
 # Load data
 load("R_objects/Rare_dat.RData")
 
@@ -685,11 +803,26 @@ invisible(gc()) #free up memory and report the memory usage.
 
 ```
 
+```{r plot_rare_curve_individual, eval = TRUE, echo = TRUE, fig.cap="Rarefaction curves for individual samples"}
+# include plot
+
+knitr::include_graphics("plots/Rcurve_individual.pdf")
+
+```
+
+```{r plot_rare_curve_individual, eval = TRUE, echo = TRUE, fig.cap="Averaged rarefaction curves for each group"}
+# include plot
+
+knitr::include_graphics("plots/Rcurve_grouped.pdf")
+
+```
+
 ### CALCULATE RAREFIED ALPHA DIVERSITIES
 
 Based on the rarefaction curves, I will remove samples with less than 10,000 reads before rarefaction. Not rarefying a sample can also create a bias, so to avoid this I will rarefy all samples to 90% of the lowest sample depth (default setting). As this will be done for just one sequencing depth and we need the results to be consistent default setting is to rarefy 100 times. The function will produce a data.frame with sample metadata and the mean and standard deviation for each sample using the methods set prior.
 
 ```{r alpha_div_calc, eval=TRUE}
+params <- readRDS("R_objects/params.RDS")
 # load data
 load("R_objects/Phyloseq.Rdata")
 load("scripts/adiv.Rdata")
@@ -721,6 +854,7 @@ invisible(gc()) #free up memory and report the memory usage.
 Before testing any of the project specific variables it is important to determine if there is any batch effects that affect the samples (for example extraction batches or sequencing run)
 
 ```{r alpha_div_batch, eval=TRUE}
+params <- readRDS("R_objects/params.RDS")
 # Load data
 load("R_objects/AlphaDiversity.RData")
 
@@ -791,6 +925,7 @@ Keeping in mind possible batch effects, now we can test for project effects. Dep
 Here is code to test alpha diversity for a single variable.
 
 ```{r alpha_div_Week, eval=TRUE}
+params <- readRDS("R_objects/params.RDS")
 # Load data
 load("R_objects/AlphaDiversity.RData")
 
@@ -878,6 +1013,7 @@ invisible(gc())
 Here is code to test alpha diversity for a single variable.
 
 ```{r alpha_div_Outcome, eval=TRUE}
+params <- readRDS("R_objects/params.RDS")
 # Load data
 load("R_objects/AlphaDiversity.RData")
 
@@ -962,6 +1098,7 @@ invisible(gc())
 ### WEEK AND OUTCOME (NESTED)
 
 ```{r adiv_nested, eval = FALSE}
+params <- readRDS("R_objects/params.RDS")
 # Load data
 load("R_objects/AlphaDiversity.RData")
 
@@ -1066,6 +1203,7 @@ I will calculate for both weighted UniFrac distances and Bray-Curtis dissimilari
 The unique fraction metric, or UniFrac, measures the phylogenetic distance between sets of taxa in a phylogenetic tree as the fraction of the branch length of the tree that leads to descendants from either one environment or the other, but not both [(Lozupone & Knight, 2005)](https://doi.org/10.1128/AEM.71.12.8228-8235.2005). Weighted UniFrac takes the abundance of each ASV into account instead of just presence/absence, which means that it will not be sensitive to sequencing depth. The UniFrac algorithm requires a rooted tree, so if ASVs has been removed from the raw da the tree should be rerooted manually, else a random ASV will be chosen as root.
 
 ```{r calc_WUniFrac, eval=TRUE, echo=TRUE}
+params <- readRDS("R_objects/params.RDS")
 # load
 load("R_objects/Phyloseq.Rdata")
 
@@ -1093,6 +1231,7 @@ invisible(gc())
 Bray-Curtis dissimilarity index (as implemented by the vegan package) is the sum of abundance difference for each species/ASV, divided by theoretical maximum difference between the samples if no ASV overlapped. The formula used is: $$d_{jk} = \frac{\sum|n_{ij}-n_{ik}|}{\sum(n_{ij}+n_{ik})}$$ Bray-Curtis dissimilarity is not a true distance metric as it does not adhere to the [triangle inequality](), but is often used to compare microbiomes. Bray-Curtis dissimilarities are based on the assumption that measurements are taken from equal areas, so differences in total counts between samples will bias the metric. As differences in sequences depth is due to differences in the lab procedures and not biological differences, we should transform our counts to relative abundances before calculating Bray-Curtis dissimilarities.
 
 ```{r calc_bray, eval=TRUE, echo=TRUE}
+params <- readRDS("R_objects/params.RDS")
 # load
 load("R_objects/Phyloseq.Rdata")
 
@@ -1126,6 +1265,7 @@ I will test each diversity index individually, so if additional indeces have bee
 #### WEIGHTED UNIFRAC
 
 ```{r batch_WUF, eval=TRUE, echo=TRUE}
+params <- readRDS("R_objects/params.RDS")
 # load
 load("R_objects/Phyloseq.Rdata")
 load("R_objects/WUF.RData")
@@ -1153,6 +1293,7 @@ invisible(gc())
 #### BRAY-CURTIS
 
 ```{r batch_Bray, eval=TRUE, echo=TRUE}
+params <- readRDS("R_objects/params.RDS")
 # load
 load("R_objects/Phyloseq.Rdata")
 load("R_objects/Bray.RData")
@@ -1188,6 +1329,7 @@ I will run the same tests as above (adonis2 and betadisper), but this time I wil
 #### WEEK
 
 ```{r beta_week, eval=TRUE, echo=TRUE}
+params <- readRDS("R_objects/params.RDS")
 # load
 load("R_objects/Phyloseq.Rdata")
 load("R_objects/WUF.RData")
@@ -1241,7 +1383,7 @@ The data from an ordination can be plotted in many different ways. Here I will l
 For PCoA each axis represent a specific amount of the overall variation in the dataset. this information can easily be extracted and plotted.
 
 ```{r plot_eigenvalues, eval=TRUE, echo=TRUE}
-
+params <- readRDS("R_objects/params.RDS")
 # load data
 load("R_objects/Phyloseq.Rdata")
 load("R_objects/WUF.RData")
@@ -1288,7 +1430,7 @@ invisible(gc())
 Phyloseq has a plotting function, but it is a bit limited in some of the settings. Therefore, I recommend to use the function to create a table of the data and then make your own plots
 
 ```{r plot_ordination, eval=TRUE, echo=TRUE}
-
+params <- readRDS("R_objects/params.RDS")
 # load data
 load("R_objects/Phyloseq.Rdata")
 load("R_objects/WUF.RData")
@@ -1339,15 +1481,16 @@ invisible(gc())
 
 ```
 
-# DIFFERENTIAL ABUNDANCE
+# COMPOSITIONAL DIFFERENCES
 
-The last part of the initial analyses is to test differential abundance of individual ASVs. There are many different methods that can be used to calculate differential abundance, all with their own advantages and disadvantages. Which method to use depends on the data and therefore I will be using DAtest as described by [Russel et al. (2018)](https://doi.org/10.1101/241802).
+The last part of the initial analyses is to compare the composition of the samples and test the differential abundance of individual ASVs or taxa.
 
 ## AGGLOMERATE DATA
 
 Depending on the project and data it might be relevant to agglomerate data at species or higher taxonomic level for this type of analysis.
 
 ```{r agglomerate, eval=TRUE, echo=TRUE}
+params <- readRDS("R_objects/params.RDS")
 # load
 load("R_objects/Phyloseq.Rdata")
 
@@ -1367,3 +1510,606 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 
 ```
+
+## CREATE TAXA PLOTS {.tabset .tabset-fade .tabset-pills}
+
+The taxonomic composition can be visualised in many different ways and at all taxonomic levels. In addition to that average abundances for groups can also be relevant to plot. The plots produced here show the relative abundance of the individual samples, with taxa with average abundance below 1% removed, and faceted (split) by a project variable (Week_clean)
+
+### PHYLUM
+
+```{r plot_phylum, eval=TRUE, echo=TRUE}
+params <- readRDS("R_objects/params.RDS")
+# load
+load("R_objects/Agglomerated.RData")
+load("scripts/merge_abundance.Rdata")
+
+# Transform sample counts to abundances
+phy <- transform_sample_counts(phy.ph, fun = function(x) x/sum(x)*100)
+phy.top <- merge_low_abundance(phy, threshold = 0.01)
+phy.top <- prune_taxa(taxa_names(phy.top) != "Other",phy.top)
+taxa_names(phy.top) <- LETTERS[seq(length(taxa_names(phy.top)))]
+
+#Melt data
+dat <- suppressWarnings(psmelt(phy.top))
+colnames(dat)[c(1,4)] <- c("Taxa","SampleID")
+
+# Create plot
+p <- ggplot(dat, aes(x = SampleID, 
+                     y = Abundance, 
+                     fill = Taxa, 
+                     color = Taxa)) +
+  geom_col() +
+  xlab("") + 
+  facet_grid(.~Week_clean,space = "free_x",scales = "free_x") +
+  clean_theme()
+set_palette(p, palette = unname(alphabet()))
+
+# print tax table
+tax <- data.frame(tax_table(phy.top))
+for (i in 7:1) if (is.na(tax[1,i])) tax[,i] <- NULL
+
+kable(tax,caption = paste("Taxa plotted at", colnames(tax)[ncol(tax)], sep = " ")) %>%
+  kable_classic(full_width = F, position = "left")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+### CLASS
+
+```{r plot_class, eval=TRUE, echo=TRUE}
+params <- readRDS("R_objects/params.RDS")
+# load
+load("R_objects/Agglomerated.RData")
+load("scripts/merge_abundance.Rdata")
+
+# Transform sample counts to abundances
+phy <- transform_sample_counts(phy.cl, fun = function(x) x/sum(x)*100)
+phy.top <- merge_low_abundance(phy, threshold = 0.01)
+phy.top <- prune_taxa(taxa_names(phy.top) != "Other",phy.top)
+taxa_names(phy.top) <- LETTERS[seq(length(taxa_names(phy.top)))]
+
+#Melt data
+dat <- suppressWarnings(psmelt(phy.top))
+colnames(dat)[c(1,4)] <- c("Taxa","SampleID")
+
+# Create plot
+p <- ggplot(dat, aes(x = SampleID, 
+                     y = Abundance, 
+                     fill = Taxa, 
+                     color = Taxa)) +
+  geom_col() +
+  xlab("") + 
+  facet_grid(.~Week_clean,space = "free_x",scales = "free_x") +
+  clean_theme()
+set_palette(p, palette = unname(alphabet()))
+
+# print tax table
+tax <- data.frame(tax_table(phy.top))
+for (i in 7:1) if (is.na(tax[1,i])) tax[,i] <- NULL
+
+kable(tax,caption = paste("Taxa plotted at", colnames(tax)[ncol(tax)], sep = " ")) %>%
+  kable_classic(full_width = F, position = "left")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+### ORDER
+
+```{r plot_order, eval=TRUE, echo=TRUE}
+params <- readRDS("R_objects/params.RDS")
+# load
+load("R_objects/Agglomerated.RData")
+load("scripts/merge_abundance.Rdata")
+
+# Transform sample counts to abundances
+phy <- transform_sample_counts(phy.or, fun = function(x) x/sum(x)*100)
+phy.top <- merge_low_abundance(phy, threshold = 0.01)
+phy.top <- prune_taxa(taxa_names(phy.top) != "Other",phy.top)
+taxa_names(phy.top) <- LETTERS[seq(length(taxa_names(phy.top)))]
+
+#Melt data
+dat <- suppressWarnings(psmelt(phy.top))
+colnames(dat)[c(1,4)] <- c("Taxa","SampleID")
+
+# Create plot
+p <- ggplot(dat, aes(x = SampleID, 
+                     y = Abundance, 
+                     fill = Taxa, 
+                     color = Taxa)) +
+  geom_col() +
+  xlab("") + 
+  facet_grid(.~Week_clean,space = "free_x",scales = "free_x") +
+  clean_theme()
+set_palette(p, palette = unname(alphabet()))
+
+# print tax table
+tax <- data.frame(tax_table(phy.top))
+for (i in 7:1) if (is.na(tax[1,i])) tax[,i] <- NULL
+
+kable(tax,caption = paste("Taxa plotted at", colnames(tax)[ncol(tax)], sep = " ")) %>%
+  kable_classic(full_width = F, position = "left")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+### FAMILY
+
+```{r plot_family, eval=TRUE, echo=TRUE}
+params <- readRDS("R_objects/params.RDS")
+# load
+load("R_objects/Agglomerated.RData")
+load("scripts/merge_abundance.Rdata")
+
+# Transform sample counts to abundances
+phy <- transform_sample_counts(phy.fa, fun = function(x) x/sum(x)*100)
+phy.top <- merge_low_abundance(phy, threshold = 0.01)
+phy.top <- prune_taxa(taxa_names(phy.top) != "Other",phy.top)
+taxa_names(phy.top) <- LETTERS[seq(length(taxa_names(phy.top)))]
+
+#Melt data
+dat <- suppressWarnings(psmelt(phy.top))
+colnames(dat)[c(1,4)] <- c("Taxa","SampleID")
+
+# Create plot
+p <- ggplot(dat, aes(x = SampleID, 
+                     y = Abundance, 
+                     fill = Taxa, 
+                     color = Taxa)) +
+  geom_col() +
+  xlab("") + 
+  facet_grid(.~Week_clean,space = "free_x",scales = "free_x") +
+  clean_theme()
+set_palette(p, palette = unname(alphabet()))
+
+# print tax table
+tax <- data.frame(tax_table(phy.top))
+for (i in 7:1) if (is.na(tax[1,i])) tax[,i] <- NULL
+
+kable(tax,caption = paste("Taxa plotted at", colnames(tax)[ncol(tax)], sep = " ")) %>%
+  kable_classic(full_width = F, position = "left")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+```
+
+### GENUS
+
+```{r plot_genus, eval=TRUE, echo=TRUE}
+params <- readRDS("R_objects/params.RDS")
+# load
+load("R_objects/Agglomerated.RData")
+load("scripts/merge_abundance.Rdata")
+
+# Transform sample counts to abundances
+phy <- transform_sample_counts(phy.ge, fun = function(x) x/sum(x)*100)
+phy.top <- merge_low_abundance(phy, threshold = 0.01)
+phy.top <- prune_taxa(taxa_names(phy.top) != "Other",phy.top)
+taxa_names(phy.top) <- LETTERS[seq(length(taxa_names(phy.top)))]
+
+#Melt data
+dat <- suppressWarnings(psmelt(phy.top))
+colnames(dat)[c(1,4)] <- c("Taxa","SampleID")
+
+# Create plot
+p <- ggplot(dat, aes(x = SampleID, 
+                     y = Abundance, 
+                     fill = Taxa, 
+                     color = Taxa)) +
+  geom_col() +
+  xlab("") + 
+  facet_grid(.~Week_clean,space = "free_x",scales = "free_x") +
+  clean_theme()
+set_palette(p, palette = unname(alphabet()))
+
+# print tax table
+tax <- data.frame(tax_table(phy.top))
+for (i in 7:1) if (is.na(tax[1,i])) tax[,i] <- NULL
+
+kable(tax,caption = paste("Taxa plotted at", colnames(tax)[ncol(tax)], sep = " ")) %>%
+  kable_classic(full_width = F, position = "left")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+### SPECIES
+
+```{r plot_species, eval=TRUE, echo=TRUE}
+params <- readRDS("R_objects/params.RDS")
+# load
+load("R_objects/Agglomerated.RData")
+load("scripts/merge_abundance.Rdata")
+
+# Transform sample counts to abundances
+phy <- transform_sample_counts(phy.sp, fun = function(x) x/sum(x)*100)
+phy.top <- merge_low_abundance(phy, threshold = 0.01)
+phy.top <- prune_taxa(taxa_names(phy.top) != "Other",phy.top)
+taxa_names(phy.top) <- LETTERS[seq(length(taxa_names(phy.top)))]
+
+#Melt data
+dat <- suppressWarnings(psmelt(phy.top))
+colnames(dat)[c(1,4)] <- c("Taxa","SampleID")
+
+# Create plot
+p <- ggplot(dat, aes(x = SampleID, 
+                     y = Abundance, 
+                     fill = Taxa, 
+                     color = Taxa)) +
+  geom_col() +
+  xlab("") + 
+  facet_grid(.~Week_clean,space = "free_x",scales = "free_x") +
+  clean_theme()
+set_palette(p, palette = unname(alphabet()))
+
+# print tax table
+tax <- data.frame(tax_table(phy.top))
+for (i in 7:1) if (is.na(tax[1,i])) tax[,i] <- NULL
+
+kable(tax,caption = paste("Taxa plotted at", colnames(tax)[ncol(tax)], sep = " ")) %>%
+  kable_classic(full_width = F, position = "left")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+## TEST DIFFERENTIAL ABUNDANCE {.tabset .tabset-fade .tabset-pills}
+
+There are many different methods that can be used to calculate differential abundance, all with their own advantages and disadvantages. Which method to use depends on the data and therefore I will be using DAtest [@DAtest] as described by [Russel et al. (2018)](https://doi.org/10.1101/241802).
+
+### SPECIES
+
+#### TEST METHOD
+
+```{r testDA_species, eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+params <- readRDS("R_objects/params.RDS")
+# load
+load("R_objects/Phyloseq.Rdata")
+load("R_objects/Agglomerated.RData")
+
+phy.sp <- subset_samples(phy.sp, Outcome_8 %in% c("Effect","Intermediate") & Week_clean == 0)
+
+# Filter data
+filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
+
+# Test best method 
+filt.test <- testDA(filt, predictor = "Outcome_8",effectSize = 10)
+
+# Evaluate the plot and summary table
+summary(filt.test)
+plot(filt.test)
+
+
+```
+
+#### RUN DAtest
+
+Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
+
+```{r DAtest_species, eval=TRUE, echo=TRUE}
+# Run the selected analysis
+filt.DA <- DA.lic(filt, predictor = "Outcome_8")
+
+# Evaluate the plot and summary table
+table(filt.DA$pval < 0.05)
+
+filt.DA[filt.DA$pval < 0.05,]
+
+# Create a subset of the samples
+filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
+DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval < 0.05], x = filt.ra)
+
+# melt the data
+DAm <- psmelt(DA.sig)
+
+# Create plot
+pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
+ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, color = Outcome_8)) + geom_boxplot() + scale_y_log10() + coord_flip()
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+```
+
+### GENUS
+
+#### TEST METHOD
+
+```{r testDA_genus, eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+params <- readRDS("R_objects/params.RDS")
+# load
+load("R_objects/Phyloseq.Rdata")
+load("R_objects/Agglomerated.RData")
+
+phy.ge <- subset_samples(phy.ge, Outcome_8 %in% c("Effect","Intermediate") & Week_clean == 0)
+
+# Filter data
+filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
+
+# Test best method 
+filt.test <- testDA(filt, predictor = "Outcome_8",effectSize = 10)
+
+# Evaluate the plot and summary table
+summary(filt.test)
+plot(filt.test)
+
+
+```
+
+#### RUN DAtest
+
+Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
+
+```{r DAtest_genus, eval=TRUE, echo=TRUE}
+# Run the selected analysis
+filt.DA <- DA.lic(filt, predictor = "Outcome_8")
+
+# Evaluate the plot and summary table
+table(filt.DA$pval < 0.05)
+
+filt.DA[filt.DA$pval < 0.05,]
+
+# Create a subset of the samples
+filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
+DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval < 0.05], x = filt.ra)
+
+# melt the data
+DAm <- psmelt(DA.sig)
+
+# Create plot
+pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
+ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, color = Outcome_8)) + geom_boxplot() + scale_y_log10() + coord_flip()
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+```
+
+### FAMILY
+
+#### TEST METHOD
+
+```{r testDA_family, eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+params <- readRDS("R_objects/params.RDS")
+# load
+load("R_objects/Phyloseq.Rdata")
+load("R_objects/Agglomerated.RData")
+
+phy.fa <- subset_samples(phy.fa, Outcome_8 %in% c("Effect","Intermediate") & Week_clean == 0)
+
+# Filter data
+filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
+
+# Test best method 
+filt.test <- testDA(filt, predictor = "Outcome_8",effectSize = 10)
+
+# Evaluate the plot and summary table
+summary(filt.test)
+plot(filt.test)
+
+
+```
+
+#### RUN DAtest
+
+Having now identified LIMMA (lli) as the optimal test I will use it to calculate differential abundance
+
+```{r DAtest, eval=TRUE, echo=TRUE}
+
+# Run the selected analysis
+filt.DA <- DA.lli(filt, predictor = "Outcome_8")
+
+# Evaluate the plot and summary table
+table(filt.DA$pval < 0.05)
+
+filt.DA[filt.DA$pval < 0.05,]
+
+# Create a subset of the samples
+filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
+DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval < 0.05], x = filt.ra)
+
+# melt the data
+DAm <- psmelt(DA.sig)
+
+# Create plot
+pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
+ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, color = Outcome_8)) + geom_boxplot() + scale_y_log10() + coord_flip()
+
+```
+
+### ORDER
+
+#### TEST METHOD
+
+```{r testDA_order, eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+params <- readRDS("R_objects/params.RDS")
+# load
+load("R_objects/Phyloseq.Rdata")
+load("R_objects/Agglomerated.RData")
+
+phy.or <- subset_samples(phy.or, Outcome_8 %in% c("Effect","Intermediate") & Week_clean == 0)
+
+# Filter data
+filt <- preDA(data = phy.or, min.reads = 20, min.samples = 4)
+
+# Test best method 
+filt.test <- testDA(filt, predictor = "Outcome_8",effectSize = 10,k = c(3,3,3))
+
+# Evaluate the plot and summary table
+summary(filt.test)
+plot(filt.test)
+
+
+```
+
+#### RUN DAtest
+
+Having now identified permutation (per) as the optimal test I will use it to calculate differential abundance
+
+```{r DAtest_order, eval=TRUE, echo=TRUE}
+
+# Run the selected analysis
+filt.DA <- DA.per(filt, predictor = "Outcome_8")
+
+# Evaluate the plot and summary table
+table(filt.DA$pval < 0.05)
+
+filt.DA[filt.DA$pval < 0.05,]
+
+# Create a subset of the samples
+filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
+DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval < 0.05], x = filt.ra)
+
+# melt the data
+DAm <- psmelt(filt.ra)
+
+# Create plot
+pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
+ggplot(DAm, aes(x = Order, y = Abundance+pseudocount, color = Outcome_8)) + geom_boxplot() + scale_y_log10() + coord_flip()
+
+```
+
+### CLASS
+
+#### TEST METHOD
+
+```{r testDA_class, eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+params <- readRDS("R_objects/params.RDS")
+# load
+load("R_objects/Phyloseq.Rdata")
+load("R_objects/Agglomerated.RData")
+
+phy.cl <- subset_samples(phy.cl, Outcome_8 %in% c("Effect","Intermediate") & Week_clean == 0)
+
+# Filter data
+filt <- preDA(data = phy.cl, min.reads = 20, min.samples = 4)
+
+# Test best method 
+filt.test <- testDA(filt, predictor = "Outcome_8",effectSize = 10)
+
+# Evaluate the plot and summary table
+summary(filt.test)
+plot(filt.test)
+
+
+```
+
+#### RUN DAtest
+
+Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
+
+```{r DAtest_class, eval=TRUE, echo=TRUE}
+
+# Run the selected analysis
+filt.DA <- DA.lic(filt, predictor = "Outcome_8")
+
+# Evaluate the plot and summary table
+table(filt.DA$pval < 0.05)
+
+filt.DA[filt.DA$pval < 0.05,]
+
+# Create a subset of the samples
+filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
+DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval < 0.05], x = filt.ra)
+
+# melt the data
+DAm <- psmelt(DA.sig)
+
+# Create plot
+pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
+ggplot(DAm, aes(x = Class, y = Abundance+pseudocount, color = Outcome_8)) + geom_boxplot() + scale_y_log10() + coord_flip()
+
+```
+
+### PHYLUM
+
+#### TEST METHOD
+
+```{r testDA_phylum, eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+params <- readRDS("R_objects/params.RDS")
+# load
+load("R_objects/Phyloseq.Rdata")
+load("R_objects/Agglomerated.RData")
+
+phy.ph <- subset_samples(phy.ph, Outcome_8 %in% c("Effect","Intermediate") & Week_clean == 0)
+
+# Filter data
+filt <- preDA(data = phy.ph, min.reads = 20, min.samples = 4)
+
+# Test best method 
+filt.test <- testDA(filt, predictor = "Outcome_8",effectSize = 10)
+
+# Evaluate the plot and summary table
+summary(filt.test)
+plot(filt.test)
+
+
+```
+
+#### RUN DAtest
+
+Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
+
+```{r DAtest_phylum, eval=TRUE, echo=TRUE}
+
+# Run the selected analysis
+filt.DA <- DA.lic(filt, predictor = "Outcome_8")
+
+# Evaluate the plot and summary table
+table(filt.DA$pval < 0.05)
+
+filt.DA[filt.DA$pval < 0.05,]
+
+# Create a subset of the samples
+filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
+DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval < 0.05], x = filt.ra)
+
+# melt the data
+DAm <- psmelt(DA.sig)
+
+# Create plot
+pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
+ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, color = Outcome_8)) + geom_boxplot() + scale_y_log10() + coord_flip()
+
+```
+
+## SETTINGS {.tabset .tabset-fade .tabset-pills}
+
+### EXPLANATION
+
+Overview of the packages that was used for this analysis
+
+### PACKAGES
+
+The analysis was run in R version `getRversion()` using the following packages:
+
+```{r packages, eval=TRUE}
+pack <- data.frame(Package = (.packages()))
+
+for (i in seq(nrow(pack))) pack$Version[i] <- as.character(packageVersion(pack$Package[i]))
+
+kbl(pack[order(pack$Package),], row.names = F) %>% kable_classic(lightable_options = "striped")   
+     
+```
+
+### PARAMETERS
+```{r parameters, eval=TRUE}
+params <- readRDS("R_objects/params.RDS")
+
+dat <- as.data.frame(params)
+
+```
+## References

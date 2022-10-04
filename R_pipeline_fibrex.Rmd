@@ -294,13 +294,14 @@ Next step is to load the metadata for the project. This step will have to be edi
 # export sample data
 tmp <- data.frame(sample_data(phy))
 # Load metadata - This part will be specific to the project
-meta <- read.csv("metadata.csv", header = T, sep = ";")
+meta <- read.table("metadata.csv", header = T, sep = ";")
+
 
 meta$sampleID[grepl("MOCK",meta$sampleID)] <- str_replace(meta$sampleID[grepl("MOCK",meta$sampleID)], "MOCK","Mock")
 
 # Verify that all the IDs are identical between the datasets
-nrow(tmp[!tmp$ID %in% meta$sampleID,])
-nrow(meta[!meta$sampleID %in% tmp$ID,])
+nrow(tmp[!tmp$Sample %in% meta$sampleID,])
+nrow(meta[!meta$sampleID %in% tmp$Sample,])
 
 # Check which, if any columns, are in both tables
 colnames(tmp)[colnames(tmp) %in% colnames(meta)]
@@ -308,10 +309,10 @@ colnames(tmp)[colnames(tmp) %in% colnames(meta)]
 
 ```{r Load_meta_data_b, eval = TRUE}
 # If any other columns than ID is in both, consider if you want it removed or renamed
-colnames(meta)[which(colnames(meta) == "type")] <- "material"
+#colnames(meta)[which(colnames(meta) == "type")] <- "material"
 
 # When you are sure that all match, then merge and add to phyloseq
-mtmp <- merge(tmp,meta,by.x="ID",by.y = "sampleID", all.x = TRUE, all.y = FALSE)
+mtmp <- merge(tmp,meta,by.x="Sample",by.y = "sampleID", all.x = TRUE, all.y = FALSE)
 row.names(mtmp) <- mtmp$ID
 
 # Add the merged data to the phyloseq object
@@ -352,7 +353,7 @@ invisible(gc()) #free up memory and report the memory usage.
 
 ## DECONTAMINATE {.tabset .tabset-fade .tabset-pills}
 
-This section runs decontam to remove likely contaminants from the dataset. The decontamination should be performed as harshly as makes sense for each specific project, but I suggest using the percent of reads removed as an indicator of what harshness is appropriate. If the project contains samples from multiple batches or runs this information should be included using the "batch" variable. How the contaminants from each batch is combined is defined using the variable "batch.combine": - "minimum" = The minimum batch probabilities is used to identify contaminants - "product" = The product of the batch probabilities is used to identify contaminants - "fisher" = The batch probabilities are combined with Fishers method and used to identify contaminants Decontam can identify contaminants based on the initial DNA concentration (frequency) and/or based on prevalence in samples and controls. Frequency based decontam assumes a negative correlation between DNA concentration and contaminant abundance. Prevalence based decontam assumes higher abundance of contaminants in controls. As for batches, the two methods can be used separately or combined. The variable "method" defines how decontam will run.
+This section runs decontam to remove likely contaminants from the dataset. The decontamination should be performed as harshly as makes sense for each specific project, but I suggest using the percent of reads removed as an indicator of what harshness is appropriate. If the project contains samples from multiple batches or runs this information should be included using the "batch" variable. How the contaminants from each batch is combined is defined using the variable "batch.combine": - "minimum" = The minimum batch probabilities is used to identify contaminants - "product" = The product of the batch probabilities is used to identify contaminants - "fisher" = The batch probabilities are combined with Fishers method and used to identify contaminants. Decontam can identify contaminants based on the initial DNA concentration (frequency) and/or based on prevalence in samples and controls. Frequency based decontam assumes a negative correlation between DNA concentration and contaminant abundance. Prevalence based decontam assumes higher abundance of contaminants in controls. As for batches, the two methods can be used separately or combined. The variable "method" defines how decontam will run.
 
 ### SINGLE SETTING
 
@@ -448,22 +449,22 @@ contam.df$combined.none <- isContaminant(phy, method="combined", neg="is.neg", c
 contam.df$minimum.none <- isContaminant(phy, method="minimum", neg="is.neg", conc="quant_reading", detailed = FALSE)
 
 # Both methods, Batch minimum
-contam.df$Prev.minimum <- isContaminant(phy, method="prevalence", neg="is.neg", detailed = FALSE, batch = "Run", batch.combine = "minimum")
-contam.df$Freq.minimum <- isContaminant(phy, method="frequency", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "minimum")
-contam.df$combined.minimum <- isContaminant(phy, method="combined", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "minimum")
-contam.df$minimum.minimum <- isContaminant(phy, method="minimum", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "minimum")
+contam.df$Prev.minimum <- isContaminant(phy, method="prevalence", neg="is.neg", detailed = FALSE, batch = "run", batch.combine = "minimum")
+contam.df$Freq.minimum <- isContaminant(phy, method="frequency", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "minimum")
+contam.df$combined.minimum <- isContaminant(phy, method="combined", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "minimum")
+contam.df$minimum.minimum <- isContaminant(phy, method="minimum", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "minimum")
 
 # Both methods, Batch product
-contam.df$Prev.product <- isContaminant(phy, method="prevalence", neg="is.neg", detailed = FALSE, batch = "Run", batch.combine = "product")
-contam.df$Freq.product <- isContaminant(phy, method="frequency", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "product")
-contam.df$combined.product <- isContaminant(phy, method="combined", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "product")
-contam.df$minimum.product <- isContaminant(phy, method="minimum", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "product")
+contam.df$Prev.product <- isContaminant(phy, method="prevalence", neg="is.neg", detailed = FALSE, batch = "run", batch.combine = "product")
+contam.df$Freq.product <- isContaminant(phy, method="frequency", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "product")
+contam.df$combined.product <- isContaminant(phy, method="combined", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "product")
+contam.df$minimum.product <- isContaminant(phy, method="minimum", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "product")
 
 # Both methods, Batch minimum
-contam.df$Prev.fisher <- isContaminant(phy, method="prevalence", neg="is.neg", detailed = FALSE, batch = "Run", batch.combine = "fisher")
-contam.df$Freq.fisher <- isContaminant(phy, method="frequency", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "fisher")
-contam.df$combined.fisher <- isContaminant(phy, method="combined", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "fisher")
-contam.df$minimum.fisher <- isContaminant(phy, method="minimum", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "fisher")
+contam.df$Prev.fisher <- isContaminant(phy, method="prevalence", neg="is.neg", detailed = FALSE, batch = "run", batch.combine = "fisher")
+contam.df$Freq.fisher <- isContaminant(phy, method="frequency", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "fisher")
+contam.df$combined.fisher <- isContaminant(phy, method="combined", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "fisher")
+contam.df$minimum.fisher <- isContaminant(phy, method="minimum", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "fisher")
 
 # decontam summary
 contam.df$ASV <- row.names(contam.df)
@@ -498,10 +499,11 @@ df$depth <- sample_sums(phy)
 df <- df[order(df$depth),]
 df$Index <- seq(nrow(df))
 ggplot(data=df, aes(x=Index, y=depth, color=type)) + geom_point() + 
-  facet_wrap("Run", nrow = 1)
+  facet_wrap("run", nrow = 1) +
+  scale_y_continuous(breaks = pretty(df$depth, n = 10))
 
 # Remove samples with few reads and filter taxa again
-phy <- prune_samples(sample_sums(phy) > 5000, phy)
+phy <- prune_samples(sample_sums(phy) > 2800, phy)
 
 phy.harsh <- prune_samples(sample_sums(phy.harsh) > 5000, phy.harsh)
 phy.harsh <- prune_taxa(taxa_sums(phy.harsh) >= 5,phy.harsh)
