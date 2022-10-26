@@ -208,7 +208,7 @@ params <- readRDS("R_objects/Adiv_params.RDS")
 load(params$input)
 load("scripts/adiv.Rdata")
 
-INDECES <- c("Observed","Shannon", "FaithPD", "Chao1")
+INDECES <- c("Observed","Shannon","FaithPD","Chao1","Evenness")
 # Calculate data
 adat <- Calculate_alpha_div(phy, methods = INDECES)
 
