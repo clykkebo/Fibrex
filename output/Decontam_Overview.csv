@@ -586,7 +586,7 @@
 "585","ASV_0616","Bacteria","Firmicutes","Bacilli","Lactobacillales","Lactobacillaceae","Ligilactobacillus","Genus_Ligilactobacillus","0","0","0.000585719079304713",FALSE,FALSE
 "586","ASV_0617","Bacteria","Firmicutes","Clostridia","Clostridiales","Order_Clostridiales","Order_Clostridiales","Order_Clostridiales","0","0","0.000645357767786478",FALSE,FALSE
 "587","ASV_0618","Bacteria","Firmicutes","Clostridia","Clostridiales","Ruminococcaceae","Family_Ruminococcaceae","Family_Ruminococcaceae","0","0","0.000677349462404411",FALSE,FALSE
-"588","ASV_0619","Bacteria","Proteobacteria","Alphaproteobacteria","Rhizobiales","Bradyrhizobiaceae","Family_Bradyrhizobiaceae","Family_Bradyrhizobiaceae","0.141604124826975","0.000203988380821828","3.9754926778382e-06",TRUE,FALSE
+"588","ASV_0619","Bacteria","Proteobacteria","Alphaproteobacteria","Rhizobiales","Bradyrhizobiaceae","Family_Bradyrhizobiaceae","Family_Bradyrhizobiaceae","0.141604124826975","0.000203988380821828","3.9754926778382e-06",TRUE,TRUE
 "589","ASV_0620","Bacteria","Acidobacteria","Acidobacteria_Gp2","Gp2","Order_Gp2","Order_Gp2","Order_Gp2","0.125151913131771","0","0",FALSE,FALSE
 "590","ASV_0621","Bacteria","Firmicutes","Clostridia","Clostridiales","Christensenellaceae","Christensenella","minuta","0","0","0.000605373495282053",FALSE,FALSE
 "591","ASV_0623","Bacteria","Bacteroidetes","Chitinophagia","Chitinophagales","Chitinophagaceae","Puia","Genus_Puia","0.164926580213926","0","2.82988729716591e-05",TRUE,TRUE
@@ -594,7 +594,7 @@
 "593","ASV_0625","Bacteria","Firmicutes","Bacilli","Lactobacillales","Lactobacillaceae","Lactobacillus","Genus_Lactobacillus","0","0","0.000598151596952819",FALSE,FALSE
 "594","ASV_0627","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Rikenellaceae","Alistipes","Genus_Alistipes","0","0","0.000578029297424949",FALSE,FALSE
 "595","ASV_0628","Bacteria","Firmicutes","Clostridia","Clostridiales","Ruminococcaceae","Family_Ruminococcaceae","Family_Ruminococcaceae","0","0","0.000564501946850799",FALSE,FALSE
-"596","ASV_0629","Bacteria","Proteobacteria","Betaproteobacteria","Burkholderiales","Comamonadaceae","Acidovorax","defluvii/facilis","0.110432322227988","0","4.44905326815886e-06",FALSE,FALSE
+"596","ASV_0629","Bacteria","Proteobacteria","Betaproteobacteria","Burkholderiales","Comamonadaceae","Acidovorax","defluvii/facilis","0.110432322227988","0","4.44905326815886e-06",FALSE,TRUE
 "597","ASV_0630","Bacteria","Proteobacteria","Alphaproteobacteria","Rhodobacterales","Rhodobacteraceae","Paracoccus","aestuarii/alcaliphilus/alkenifer/aminophilus/aminovorans/beibuensis/caeni/carotinifaciens/chinensis/denitrificans/fistulariae/haeundaensis/homiensis/huijuniae/isoporae/kamogawaensis/koreensis/limosus/lutimaris/marcusii/marinus/panacisoli/saliphilus/sediminis/siganidrum/sphaerophysae/stylophorae/tibetensis/yeei","0.154561002275662","0","0",FALSE,FALSE
 "598","ASV_0631","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Bacteroidaceae","Bacteroides","Genus_Bacteroides","0","0","0.000692926406464872",FALSE,FALSE
 "599","ASV_0632","Bacteria","Firmicutes","Clostridia","Clostridiales","Lachnospiraceae","Family_Lachnospiraceae","Family_Lachnospiraceae","0","0","0.000858268690133582",FALSE,FALSE
@@ -648,7 +648,7 @@
 "647","ASV_0682","Bacteria","Firmicutes","Bacilli","Lactobacillales","Lactobacillaceae","Ligilactobacillus","Genus_Ligilactobacillus","0","0","0.000278591731331156",FALSE,FALSE
 "648","ASV_0683","Bacteria","Firmicutes","Bacilli","Bacillales","Bacillaceae_1","Family_Bacillaceae_1","Family_Bacillaceae_1","0","0.00778614892894004","0",FALSE,FALSE
 "649","ASV_0684","Bacteria","Actinobacteria","Coriobacteriia","Eggerthellales","Eggerthellaceae","Adlercreutzia","Genus_Adlercreutzia","0","0","0.000375510021743431",FALSE,FALSE
-"650","ASV_0685","Bacteria","Bacteroidetes","Phylum_Bacteroidetes","Phylum_Bacteroidetes","Phylum_Bacteroidetes","Phylum_Bacteroidetes","Phylum_Bacteroidetes","0.0774441399696917","0","0",FALSE,TRUE
+"650","ASV_0685","Bacteria","Bacteroidetes","Phylum_Bacteroidetes","Phylum_Bacteroidetes","Phylum_Bacteroidetes","Phylum_Bacteroidetes","Phylum_Bacteroidetes","0.0774441399696917","0","0",FALSE,FALSE
 "651","ASV_0686","Bacteria","Firmicutes","Clostridia","Clostridiales","Ruminococcaceae","Family_Ruminococcaceae","Family_Ruminococcaceae","0","0","0.000517517801156981",FALSE,FALSE
 "652","ASV_0687","Bacteria","Firmicutes","Clostridia","Clostridiales","Order_Clostridiales","Order_Clostridiales","Order_Clostridiales","0","0","0.000416702301684817",FALSE,FALSE
 "653","ASV_0688","Bacteria","Firmicutes","Clostridia","Clostridiales","Ruminococcaceae","Flavonifractor","Genus_Flavonifractor","0","0","0.000424058655037212",FALSE,FALSE
@@ -672,7 +672,7 @@
 "671","ASV_0707","Bacteria","Firmicutes","Bacilli","Bacillales","Staphylococcaceae","Staphylococcus","Genus_Staphylococcus","0","0","0.000339861487513715",FALSE,FALSE
 "672","ASV_0708","Bacteria","Firmicutes","Bacilli","Lactobacillales","Lactobacillaceae","Limosilactobacillus","Genus_Limosilactobacillus","0","0.00551433679885524","0",FALSE,FALSE
 "673","ASV_0709","Bacteria","Firmicutes","Clostridia","Clostridiales","Ruminococcaceae","Family_Ruminococcaceae","Family_Ruminococcaceae","0","0","0.000270336285984818",FALSE,FALSE
-"674","ASV_0710","Bacteria","Proteobacteria","Betaproteobacteria","Rhodocyclales","Azonexaceae","Ferribacterium","Genus_Ferribacterium","0.147365241910754","0.000149702391645409","0",FALSE,FALSE
+"674","ASV_0710","Bacteria","Proteobacteria","Betaproteobacteria","Rhodocyclales","Azonexaceae","Ferribacterium","Genus_Ferribacterium","0.147365241910754","0.000149702391645409","0",FALSE,TRUE
 "675","ASV_0711","Bacteria","Firmicutes","Clostridia","Clostridiales","Ruminococcaceae","Gemmiger","Genus_Gemmiger","0","0","0.000254314611444422",FALSE,FALSE
 "676","ASV_0712","Bacteria","Proteobacteria","Alphaproteobacteria","Sphingomonadales","Sphingomonadaceae","Sphingomonas","echinoides/fennica/haloaromaticamans/laterariae/parapaucimobilis/paucimobilis/pseudosanguinis/roseiflava/sanguinis/wittichii/yabuuchiae","0.206725842698958","0","5.36338113983112e-06",FALSE,TRUE
 "677","ASV_0714","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Muribaculaceae","Paramuribaculum","Genus_Paramuribaculum","0","0","0.000225721095723576",FALSE,FALSE
