@@ -337,7 +337,7 @@ Keeping in mind possible batch effects, now we can test for project effects. Dep
 Individual factors to be tested in Fibrex are: feed, material, treatment, day, group -> feed_treat, feed_treat_day
 Nested factors: 
 
-## FEED (INDIVIDUAL)
+## FEED (Day 0 only feces)
 
 Here is code to test alpha diversity for the feed categorical variable.
 
@@ -347,6 +347,9 @@ params <- readRDS("R_objects/Adiv_params.RDS")
 # Load data
 load("R_objects/AlphaDiversity.RData")
 TEST.VAR <- "feed"
+
+# Subset
+adat <- adat[adat$material == "Feces" & adat$day == 0,]
 
 # Remove samples with incomplete metadata
 adat <- adat[!is.na(adat[,TEST.VAR]),]
@@ -369,7 +372,6 @@ As there is no significant interaction identified by the chi^2^-test, we can ign
 ```{r alpha_div_Week_test, eval=TRUE, fig.cap="Boxplot of alpha diversity"}
 ################################################################################
 
-adat <- adat[adat$material == "Feces"]
 #### Test project variable
 ### Observed richness
 FORMULA <- as.formula(paste("Observed ~", TEST.VAR, sep = " "))
@@ -463,10 +465,11 @@ p <- ggboxplot(adat, x = TEST.VAR, y = "FaithPD",
 p.fpd <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
 
 # If there is a significant batch effect, then it will be necessary to correct following tests for this effect.
-filename <- paste0("plots/adiv_",TEST.VAR,".png")
+filename <- paste0("plots/adiv_d0_feces_",TEST.VAR,".png")
 adiv_plot <- ggarrange(p.obs,p.sdi, p.fpd, nrow = 1, labels = c("A)","B)","C)"), common.legend = TRUE,legend = "bottom")
-adiv_plot_title <- annotate_figure(adiv_plot, top = text_grob("Difference in alpha diversity between feed:", color = "red", face = "bold", size = 8))
-#adiv_plot + ggtitle(paste0("Difference in alpha diversity between ",TEST.VAR,":"))
+(adiv_plot_title <- annotate_figure(adiv_plot, top = text_grob("Difference in alpha diversity between feed at day 0:", color = "red", face = "bold", size = 8)))
+adiv_plot_title
+
 suppressMessages(ggsave(filename = filename, plot = adiv_plot_title, device = "png"))
 
 # clear the environment and release memory
@@ -474,7 +477,7 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
-## TREATMENT (INDIVIDUAL)
+## TREATMENT (Day 0 only feces)
 
 Here is code to test alpha diversity for the treatment categorical variable.
 
@@ -484,6 +487,9 @@ params <- readRDS("R_objects/Adiv_params.RDS")
 # Load data
 load("R_objects/AlphaDiversity.RData")
 TEST.VAR <- "treatment"
+
+# Subset
+adat <- adat[adat$material == "Feces" & adat$day == 0,]
 
 # Remove samples with incomplete metadata
 adat <- adat[!is.na(adat[,TEST.VAR]),]
@@ -600,10 +606,11 @@ p <- ggboxplot(adat, x = TEST.VAR, y = "FaithPD",
 p.fpd <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
 
 # If there is a significant batch effect, then it will be necessary to correct following tests for this effect.
-filename <- paste0("plots/adiv_",TEST.VAR,".png")
+filename <- paste0("plots/adiv_d0_feces_",TEST.VAR,".png")
 adiv_plot <- ggarrange(p.obs,p.sdi, p.fpd, nrow = 1, labels = c("A)","B)","C)"), common.legend = TRUE,legend = "bottom")
-adiv_plot_title <- annotate_figure(adiv_plot, top = text_grob("Difference in alpha diversity between treatment:", color = "red", face = "bold", size = 8))
-#adiv_plot + ggtitle(paste0("Difference in alpha diversity between ",TEST.VAR,":"))
+(adiv_plot_title <- annotate_figure(adiv_plot, top = text_grob("Difference in alpha diversity between treatment at day 0:", color = "red", face = "bold", size = 8)))
+
+
 suppressMessages(ggsave(filename = filename, plot = adiv_plot_title, device = "png"))
 
 # clear the environment and release memory
@@ -611,556 +618,7 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
-## MATERIAL (INDIVIDUAL)
-
-Here is code to test alpha diversity for the material categorical variable.
-
-```{r alpha_div_Week_independence, eval=TRUE}
-
-params <- readRDS("R_objects/Adiv_params.RDS")
-# Load data
-load("R_objects/AlphaDiversity.RData")
-TEST.VAR <- "material"
-
-# Remove samples with incomplete metadata
-adat <- adat[!is.na(adat[,TEST.VAR]),]
-adat[,TEST.VAR] <- as.factor(adat[,TEST.VAR])
-
-### Determine if any batch effect might influence your data
-# Calculate distribution counts
-freq.t <- with(adat, table(run, material, exclude = NULL))
-freq.t
-
-# Determine distribution percentages
-prop.table(freq.t,2)*100
-
-# Test if any difference is significant (if not significant the batch effect should be negligible)
-chisq_test(freq.t)
-```
-
-As there is no significant interaction identified by the chi^2^-test, we can ignore the batch effects when analysing the variable.
-
-```{r alpha_div_Week_test, eval=TRUE, fig.cap="Boxplot of alpha diversity"}
-################################################################################
-
-#adat <- adat[adat$feed == "Feces"]
-#### Test project variable
-### Observed richness
-FORMULA <- as.formula(paste("Observed ~", TEST.VAR, sep = " "))
-compare_means(FORMULA,  data = adat, method = "kruskal")
-
-## If significant:
-# Perform pairwise comparisons
-stat.test <- adat %>%
-  wilcox_test(FORMULA) %>%
-  adjust_pvalue(method = "BH") %>%
-  add_significance("p.adj") %>% 
-  add_x_position(x = TEST.VAR) %>%
-  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
-
-# Format for 
-if (sum(stat.test$p.adj.signif != "ns") == 0) {
-  stat.sig <- stat.test %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-} else {
-  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-}
-
-# Create plot
-p <- ggboxplot(adat, x = TEST.VAR, y = "Observed",
-          color = TEST.VAR, palette = "jco",
-          add = "jitter")
-
-p.obs <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
-
-### Test shannon diversity index
-# Run statistical test of batch effect
-FORMULA <- as.formula(paste("Shannon ~", TEST.VAR, sep = " "))
-compare_means(FORMULA,  data = adat, method = "kruskal")
-
-## If significant:
-# Perform pairwise comparisons
-stat.test <- adat %>%
-  wilcox_test(FORMULA) %>%
-  adjust_pvalue(method = "BH") %>%
-  add_significance("p.adj") %>% 
-  add_x_position(x = TEST.VAR) %>%
-  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
-
-# Format for 
-if (sum(stat.test$p.adj.signif != "ns") == 0) {
-  stat.sig <- stat.test %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-} else {
-  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-}
-# Create plot
-p <- ggboxplot(adat, x = TEST.VAR, y = "Shannon", color = TEST.VAR, palette = "jco", add = "jitter")
-
-p.sdi <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
-
-# Test Faith phylogenetic distance
-FORMULA <- as.formula(paste("FaithPD ~", TEST.VAR, sep = " "))
-compare_means(FORMULA,  data = adat, method = "kruskal")
-
-## If significant:
-# Perform pairwise comparisons
-stat.test <- adat %>%
-  wilcox_test(FORMULA) %>%
-  adjust_pvalue(method = "BH") %>%
-  add_significance("p.adj") %>% 
-  add_x_position(x = TEST.VAR) %>%
-  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
-
-# Format for 
-if (sum(stat.test$p.adj.signif != "ns") == 0) {
-  stat.sig <- stat.test %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-} else {
-  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-}
-
-# Create plot
-p <- ggboxplot(adat, x = TEST.VAR, y = "FaithPD",
-          color = TEST.VAR, palette = "jco",
-          add = "jitter")
-
-p.fpd <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
-
-# If there is a significant batch effect, then it will be necessary to correct following tests for this effect.
-filename <- paste0("plots/adiv_",TEST.VAR,".png")
-adiv_plot <- ggarrange(p.obs,p.sdi, p.fpd, nrow = 1, labels = c("A)","B)","C)"), common.legend = TRUE,legend = "bottom")
-adiv_plot_title <- annotate_figure(adiv_plot, top = text_grob("Difference in alpha diversity between material:", color = "red", face = "bold", size = 8))
-#adiv_plot + ggtitle(paste0("Difference in alpha diversity between ",TEST.VAR,":"))
-suppressMessages(ggsave(filename = filename, plot = adiv_plot_title, device = "png"))
-
-# clear the environment and release memory
-rm(list = ls(all.names = TRUE))
-invisible(gc())
-```
-
-## GROUP (INDIVIDUAL)
-
-Here is code to test alpha diversity for the GROUP categorical variable.
-
-```{r alpha_div_Week_independence, eval=TRUE}
-
-params <- readRDS("R_objects/Adiv_params.RDS")
-# Load data
-load("R_objects/AlphaDiversity.RData")
-TEST.VAR <- "group"
-
-# Remove samples with incomplete metadata
-adat <- adat[!is.na(adat[,TEST.VAR]),]
-adat[,TEST.VAR] <- as.factor(adat[,TEST.VAR])
-
-### Determine if any batch effect might influence your data
-# Calculate distribution counts
-freq.t <- with(adat, table(run, group, exclude = NULL))
-freq.t
-
-# Determine distribution percentages
-prop.table(freq.t,2)*100
-
-# Test if any difference is significant (if not significant the batch effect should be negligible)
-chisq_test(freq.t)
-```
-
-As there is no significant interaction identified by the chi^2^-test, we can ignore the batch effects when analysing the variable.
-
-```{r alpha_div_Week_test, eval=TRUE, fig.cap="Boxplot of alpha diversity"}
-################################################################################
-
-#adat <- adat[adat$feed == "Feces"]
-#### Test project variable
-### Observed richness
-FORMULA <- as.formula(paste("Observed ~", TEST.VAR, sep = " "))
-compare_means(FORMULA,  data = adat, method = "kruskal")
-
-## If significant:
-# Perform pairwise comparisons
-stat.test <- adat %>%
-  wilcox_test(FORMULA) %>%
-  adjust_pvalue(method = "BH") %>%
-  add_significance("p.adj") %>% 
-  add_x_position(x = TEST.VAR) %>%
-  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
-
-# Format for 
-if (sum(stat.test$p.adj.signif != "ns") == 0) {
-  stat.sig <- stat.test %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-} else {
-  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-}
-
-# Create plot
-p <- ggboxplot(adat, x = TEST.VAR, y = "Observed",
-          color = TEST.VAR, palette = "jco",
-          add = "jitter")
-
-p.obs <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
-
-### Test shannon diversity index
-# Run statistical test of batch effect
-FORMULA <- as.formula(paste("Shannon ~", TEST.VAR, sep = " "))
-compare_means(FORMULA,  data = adat, method = "kruskal")
-
-## If significant:
-# Perform pairwise comparisons
-stat.test <- adat %>%
-  wilcox_test(FORMULA) %>%
-  adjust_pvalue(method = "BH") %>%
-  add_significance("p.adj") %>% 
-  add_x_position(x = TEST.VAR) %>%
-  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
-
-# Format for 
-if (sum(stat.test$p.adj.signif != "ns") == 0) {
-  stat.sig <- stat.test %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-} else {
-  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-}
-# Create plot
-p <- ggboxplot(adat, x = TEST.VAR, y = "Shannon", color = TEST.VAR, palette = "jco", add = "jitter")
-
-p.sdi <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
-
-# Test Faith phylogenetic distance
-FORMULA <- as.formula(paste("FaithPD ~", TEST.VAR, sep = " "))
-compare_means(FORMULA,  data = adat, method = "kruskal")
-
-## If significant:
-# Perform pairwise comparisons
-stat.test <- adat %>%
-  wilcox_test(FORMULA) %>%
-  adjust_pvalue(method = "BH") %>%
-  add_significance("p.adj") %>% 
-  add_x_position(x = TEST.VAR) %>%
-  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
-
-# Format for 
-if (sum(stat.test$p.adj.signif != "ns") == 0) {
-  stat.sig <- stat.test %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-} else {
-  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-}
-
-# Create plot
-p <- ggboxplot(adat, x = TEST.VAR, y = "FaithPD",
-          color = TEST.VAR, palette = "jco",
-          add = "jitter")
-
-p.fpd <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
-
-# If there is a significant batch effect, then it will be necessary to correct following tests for this effect.
-filename <- paste0("plots/adiv_",TEST.VAR,".png")
-adiv_plot <- ggarrange(p.obs,p.sdi, p.fpd, nrow = 1, labels = c("A)","B)","C)"), common.legend = TRUE,legend = "bottom")
-adiv_plot_title <- annotate_figure(adiv_plot, top = text_grob("Difference in alpha diversity between groups:", color = "red", face = "bold", size = 8))
-#adiv_plot + ggtitle(paste0("Difference in alpha diversity between ",TEST.VAR,":"))
-suppressMessages(ggsave(filename = filename, plot = adiv_plot_title, device = "png"))
-
-# clear the environment and release memory
-rm(list = ls(all.names = TRUE))
-invisible(gc())
-```
-
-## FEED_TREAT (INDIVIDUAL)
-
-Here is code to test alpha diversity for the feed+treatment categorical variable.
-
-```{r alpha_div_Week_independence, eval=TRUE}
-
-params <- readRDS("R_objects/Adiv_params.RDS")
-# Load data
-load("R_objects/AlphaDiversity.RData")
-TEST.VAR <- "feed_treat"
-
-# Remove samples with incomplete metadata
-adat <- adat[!is.na(adat[,TEST.VAR]),]
-adat[,TEST.VAR] <- as.factor(adat[,TEST.VAR])
-
-### Determine if any batch effect might influence your data
-# Calculate distribution counts
-freq.t <- with(adat, table(run, feed_treat, exclude = NULL))
-freq.t
-
-# Determine distribution percentages
-prop.table(freq.t,2)*100
-
-# Test if any difference is significant (if not significant the batch effect should be negligible)
-chisq_test(freq.t)
-```
-
-As there is no significant interaction identified by the chi^2^-test, we can ignore the batch effects when analysing the variable.
-
-```{r alpha_div_Week_test, eval=TRUE, fig.cap="Boxplot of alpha diversity"}
-################################################################################
-
-#adat <- adat[adat$feed == "Feces"]
-#### Test project variable
-### Observed richness
-FORMULA <- as.formula(paste("Observed ~", TEST.VAR, sep = " "))
-compare_means(FORMULA,  data = adat, method = "kruskal")
-
-## If significant:
-# Perform pairwise comparisons
-stat.test <- adat %>%
-  wilcox_test(FORMULA) %>%
-  adjust_pvalue(method = "BH") %>%
-  add_significance("p.adj") %>% 
-  add_x_position(x = TEST.VAR) %>%
-  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
-
-# Format for 
-if (sum(stat.test$p.adj.signif != "ns") == 0) {
-  stat.sig <- stat.test %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-} else {
-  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-}
-
-# Create plot
-p <- ggboxplot(adat, x = TEST.VAR, y = "Observed",
-          color = TEST.VAR, palette = "jco",
-          add = "jitter")
-
-p.obs <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
-
-### Test shannon diversity index
-# Run statistical test of batch effect
-FORMULA <- as.formula(paste("Shannon ~", TEST.VAR, sep = " "))
-compare_means(FORMULA,  data = adat, method = "kruskal")
-
-## If significant:
-# Perform pairwise comparisons
-stat.test <- adat %>%
-  wilcox_test(FORMULA) %>%
-  adjust_pvalue(method = "BH") %>%
-  add_significance("p.adj") %>% 
-  add_x_position(x = TEST.VAR) %>%
-  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
-
-# Format for 
-if (sum(stat.test$p.adj.signif != "ns") == 0) {
-  stat.sig <- stat.test %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-} else {
-  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-}
-# Create plot
-p <- ggboxplot(adat, x = TEST.VAR, y = "Shannon", color = TEST.VAR, palette = "jco", add = "jitter")
-
-p.sdi <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
-
-# Test Faith phylogenetic distance
-FORMULA <- as.formula(paste("FaithPD ~", TEST.VAR, sep = " "))
-compare_means(FORMULA,  data = adat, method = "kruskal")
-
-## If significant:
-# Perform pairwise comparisons
-stat.test <- adat %>%
-  wilcox_test(FORMULA) %>%
-  adjust_pvalue(method = "BH") %>%
-  add_significance("p.adj") %>% 
-  add_x_position(x = TEST.VAR) %>%
-  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
-
-# Format for 
-if (sum(stat.test$p.adj.signif != "ns") == 0) {
-  stat.sig <- stat.test %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-} else {
-  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-}
-
-# Create plot
-p <- ggboxplot(adat, x = TEST.VAR, y = "FaithPD",
-          color = TEST.VAR, palette = "jco",
-          add = "jitter")
-
-p.fpd <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
-
-# If there is a significant batch effect, then it will be necessary to correct following tests for this effect.
-filename <- paste0("plots/adiv_",TEST.VAR,".png")
-adiv_plot <- ggarrange(p.obs,p.sdi, p.fpd, nrow = 1, labels = c("A)","B)","C)"), common.legend = TRUE,legend = "bottom")
-adiv_plot_title <- annotate_figure(adiv_plot, top = text_grob("Difference in alpha diversity between feed+treatment:", color = "red", face = "bold", size = 8))
-#adiv_plot + ggtitle(paste0("Difference in alpha diversity between ",TEST.VAR,":"))
-suppressMessages(ggsave(filename = filename, plot = adiv_plot_title, device = "png"))
-
-# clear the environment and release memory
-rm(list = ls(all.names = TRUE))
-invisible(gc())
-```
-
-## FEED_TREAT_DAY (INDIVIDUAL)
-
-Here is code to test alpha diversity for the feed+treatment+day categorical variable.
-
-```{r alpha_div_Week_independence, eval=TRUE}
-
-params <- readRDS("R_objects/Adiv_params.RDS")
-# Load data
-load("R_objects/AlphaDiversity.RData")
-TEST.VAR <- "feed_treat_day"
-
-# Remove samples with incomplete metadata
-adat <- adat[!is.na(adat[,TEST.VAR]),]
-adat[,TEST.VAR] <- as.factor(adat[,TEST.VAR])
-
-### Determine if any batch effect might influence your data
-# Calculate distribution counts
-freq.t <- with(adat, table(run, feed_treat_day, exclude = NULL))
-freq.t
-
-# Determine distribution percentages
-prop.table(freq.t,2)*100
-
-# Test if any difference is significant (if not significant the batch effect should be negligible)
-chisq_test(freq.t)
-```
-
-As there is no significant interaction identified by the chi^2^-test, we can ignore the batch effects when analysing the variable.
-
-```{r alpha_div_Week_test, eval=TRUE, fig.cap="Boxplot of alpha diversity"}
-################################################################################
-
-#adat <- adat[adat$material == "Feces"]
-#### Test project variable
-### Observed richness
-FORMULA <- as.formula(paste("Observed ~", TEST.VAR, sep = " "))
-compare_means(FORMULA,  data = adat, method = "kruskal")
-
-## If significant:
-# Perform pairwise comparisons
-stat.test <- adat %>%
-  wilcox_test(FORMULA) %>%
-  adjust_pvalue(method = "BH") %>%
-  add_significance("p.adj") %>% 
-  add_x_position(x = TEST.VAR) %>%
-  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
-
-# Format for 
-if (sum(stat.test$p.adj.signif != "ns") == 0) {
-  stat.sig <- stat.test %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-} else {
-  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-}
-
-# Create plot
-p <- ggboxplot(adat, x = TEST.VAR, y = "Observed",
-          color = TEST.VAR, palette = "jco",
-          add = "jitter")
-
-p.obs <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
-
-### Test shannon diversity index
-# Run statistical test of batch effect
-FORMULA <- as.formula(paste("Shannon ~", TEST.VAR, sep = " "))
-compare_means(FORMULA,  data = adat, method = "kruskal")
-
-## If significant:
-# Perform pairwise comparisons
-stat.test <- adat %>%
-  wilcox_test(FORMULA) %>%
-  adjust_pvalue(method = "BH") %>%
-  add_significance("p.adj") %>% 
-  add_x_position(x = TEST.VAR) %>%
-  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
-
-# Format for 
-if (sum(stat.test$p.adj.signif != "ns") == 0) {
-  stat.sig <- stat.test %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-} else {
-  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-}
-# Create plot
-p <- ggboxplot(adat, x = TEST.VAR, y = "Shannon", color = TEST.VAR, palette = "jco", add = "jitter")
-
-p.sdi <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
-
-# Test Faith phylogenetic distance
-FORMULA <- as.formula(paste("FaithPD ~", TEST.VAR, sep = " "))
-compare_means(FORMULA,  data = adat, method = "kruskal")
-
-## If significant:
-# Perform pairwise comparisons
-stat.test <- adat %>%
-  wilcox_test(FORMULA) %>%
-  adjust_pvalue(method = "BH") %>%
-  add_significance("p.adj") %>% 
-  add_x_position(x = TEST.VAR) %>%
-  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
-
-# Format for 
-if (sum(stat.test$p.adj.signif != "ns") == 0) {
-  stat.sig <- stat.test %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-} else {
-  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
-    add_y_position(step.increase = 0.25) %>%
-    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
-}
-
-# Create plot
-p <- ggboxplot(adat, x = TEST.VAR, y = "FaithPD",
-          color = TEST.VAR, palette = "jco",
-          add = "jitter")
-
-p.fpd <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
-
-# If there is a significant batch effect, then it will be necessary to correct following tests for this effect.
-filename <- paste0("plots/adiv_",TEST.VAR,".png")
-adiv_plot <- ggarrange(p.obs,p.sdi, p.fpd, nrow = 1, labels = c("A)","B)","C)"), common.legend = TRUE,legend = "bottom")
-adiv_plot_title <- annotate_figure(adiv_plot, top = text_grob("Difference in alpha diversity between feed+treatment+day:", color = "red", face = "bold", size = 8))
-#adiv_plot + ggtitle(paste0("Difference in alpha diversity between ",TEST.VAR,":"))
-suppressMessages(ggsave(filename = filename, plot = adiv_plot_title, device = "png"))
-
-# clear the environment and release memory
-rm(list = ls(all.names = TRUE))
-invisible(gc())
-```
-
-
-## MATERIAL AND FEED_TREAT (NESTED)
+## FEED AND TREAT (Day 0 only feces)
 
 Testing two variables are used when there is a nested aspect in the analysis, for example difference in treatment at each timepoint, that would have the timepoint as the outer variable and treatment as the inner variable
 
@@ -1170,9 +628,11 @@ params <- readRDS("R_objects/Adiv_params.RDS")
 # Load data
 load("R_objects/AlphaDiversity.RData")
 
-adat$matfeedtreat <- as.factor(adat$feed_treat)
-INNER.VAR <- "feed_treat"
-OUTER.VAR <- "material"
+OUTER.VAR <- "feed"
+INNER.VAR <- "treatment"
+
+# Subset
+adat <- adat[adat$material == "Feces" & adat$day == 0,]
 
 # Remove samples with incomplete metadata
 adat <- adat[!is.na(adat[,INNER.VAR]) & !is.na(adat[,OUTER.VAR]),]
@@ -1257,10 +717,942 @@ filename <- paste0("plots/adiv_",OUTER.VAR,"_",INNER.VAR,".png")
 adiv_plot <- ggarrange(p.obs,p.sha, nrow = 1, labels = c("A)","B)"), common.legend = TRUE,legend = "bottom",align = "hv")
 suppressMessages(ggsave(filename = filename, plot = adiv_plot, device = "png"))
 
+# 
+# # clear the environment and release memory
+# rm(list = ls(all.names = TRUE)[ls(all.names = TRUE) != "params"])
+# invisible(gc())
+
+
+```
+
+
+## FEED (Day 8 only feces)
+
+Here is code to test alpha diversity for the feed categorical variable.
+
+```{r alpha_div_Week_independence, eval=TRUE}
+
+params <- readRDS("R_objects/Adiv_params.RDS")
+# Load data
+load("R_objects/AlphaDiversity.RData")
+TEST.VAR <- "feed"
+
+# Subset
+adat <- adat[adat$material == "Feces" & adat$day == 8,]
+
+# Remove samples with incomplete metadata
+adat <- adat[!is.na(adat[,TEST.VAR]),]
+adat[,TEST.VAR] <- as.factor(adat[,TEST.VAR])
+
+### Determine if any batch effect might influence your data
+# Calculate distribution counts
+freq.t <- with(adat, table(run, feed, exclude = NULL))
+freq.t
+
+# Determine distribution percentages
+prop.table(freq.t,2)*100
+
+# Test if any difference is significant (if not significant the batch effect should be negligible)
+chisq_test(freq.t)
+```
+
+As there is no significant interaction identified by the chi^2^-test, we can ignore the batch effects when analysing the variable.
+
+```{r alpha_div_Week_test, eval=TRUE, fig.cap="Boxplot of alpha diversity"}
+################################################################################
+
+#### Test project variable
+### Observed richness
+FORMULA <- as.formula(paste("Observed ~", TEST.VAR, sep = " "))
+compare_means(FORMULA,  data = adat, method = "kruskal")
+
+## If significant:
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  wilcox_test(FORMULA) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_x_position(x = TEST.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Format for 
+if (sum(stat.test$p.adj.signif != "ns") == 0) {
+  stat.sig <- stat.test %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+} else {
+  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+}
+
+# Create plot
+p <- ggboxplot(adat, x = TEST.VAR, y = "Observed",
+          color = TEST.VAR, palette = "jco",
+          add = "jitter")
+
+p.obs <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
+
+### Test shannon diversity index
+# Run statistical test of batch effect
+FORMULA <- as.formula(paste("Shannon ~", TEST.VAR, sep = " "))
+compare_means(FORMULA,  data = adat, method = "kruskal")
+
+## If significant:
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  wilcox_test(FORMULA) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_x_position(x = TEST.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Format for 
+if (sum(stat.test$p.adj.signif != "ns") == 0) {
+  stat.sig <- stat.test %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+} else {
+  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+}
+# Create plot
+p <- ggboxplot(adat, x = TEST.VAR, y = "Shannon", color = TEST.VAR, palette = "jco", add = "jitter")
+
+p.sdi <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
+
+# Test Faith phylogenetic distance
+FORMULA <- as.formula(paste("FaithPD ~", TEST.VAR, sep = " "))
+compare_means(FORMULA,  data = adat, method = "kruskal")
+
+## If significant:
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  wilcox_test(FORMULA) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_x_position(x = TEST.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Format for 
+if (sum(stat.test$p.adj.signif != "ns") == 0) {
+  stat.sig <- stat.test %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+} else {
+  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+}
+
+# Create plot
+p <- ggboxplot(adat, x = TEST.VAR, y = "FaithPD",
+          color = TEST.VAR, palette = "jco",
+          add = "jitter")
+
+p.fpd <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
+
+# If there is a significant batch effect, then it will be necessary to correct following tests for this effect.
+filename <- paste0("plots/adiv_d8_feces_",TEST.VAR,".png")
+adiv_plot <- ggarrange(p.obs,p.sdi, p.fpd, nrow = 1, labels = c("A)","B)","C)"), common.legend = TRUE,legend = "bottom")
+(adiv_plot_title <- annotate_figure(adiv_plot, top = text_grob("Difference in alpha diversity between feed at day 8:", color = "red", face = "bold", size = 8)))
+adiv_plot_title
+
+suppressMessages(ggsave(filename = filename, plot = adiv_plot_title, device = "png"))
 
 # clear the environment and release memory
-rm(list = ls(all.names = TRUE)[ls(all.names = TRUE) != "params"])
+rm(list = ls(all.names = TRUE))
 invisible(gc())
+```
+
+## TREATMENT (Day 8 only feces)
+
+Here is code to test alpha diversity for the treatment categorical variable.
+
+```{r alpha_div_Week_independence, eval=TRUE}
+
+params <- readRDS("R_objects/Adiv_params.RDS")
+# Load data
+load("R_objects/AlphaDiversity.RData")
+TEST.VAR <- "treatment"
+
+# Subset
+adat <- adat[adat$material == "Feces" & adat$day == 8,]
+
+# Remove samples with incomplete metadata
+adat <- adat[!is.na(adat[,TEST.VAR]),]
+adat[,TEST.VAR] <- as.factor(adat[,TEST.VAR])
+
+### Determine if any batch effect might influence your data
+# Calculate distribution counts
+freq.t <- with(adat, table(run, treatment, exclude = NULL))
+freq.t
+
+# Determine distribution percentages
+prop.table(freq.t,2)*100
+
+# Test if any difference is significant (if not significant the batch effect should be negligible)
+chisq_test(freq.t)
+```
+
+As there is no significant interaction identified by the chi^2^-test, we can ignore the batch effects when analysing the variable.
+
+```{r alpha_div_Week_test, eval=TRUE, fig.cap="Boxplot of alpha diversity"}
+################################################################################
+
+#adat <- adat[adat$feed == "Feces"]
+#### Test project variable
+### Observed richness
+FORMULA <- as.formula(paste("Observed ~", TEST.VAR, sep = " "))
+compare_means(FORMULA,  data = adat, method = "kruskal")
+
+## If significant:
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  wilcox_test(FORMULA) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_x_position(x = TEST.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Format for 
+if (sum(stat.test$p.adj.signif != "ns") == 0) {
+  stat.sig <- stat.test %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+} else {
+  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+}
+
+# Create plot
+p <- ggboxplot(adat, x = TEST.VAR, y = "Observed",
+          color = TEST.VAR, palette = "jco",
+          add = "jitter")
+
+p.obs <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
+
+### Test shannon diversity index
+# Run statistical test of batch effect
+FORMULA <- as.formula(paste("Shannon ~", TEST.VAR, sep = " "))
+compare_means(FORMULA,  data = adat, method = "kruskal")
+
+## If significant:
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  wilcox_test(FORMULA) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_x_position(x = TEST.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Format for 
+if (sum(stat.test$p.adj.signif != "ns") == 0) {
+  stat.sig <- stat.test %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+} else {
+  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+}
+# Create plot
+p <- ggboxplot(adat, x = TEST.VAR, y = "Shannon", color = TEST.VAR, palette = "jco", add = "jitter")
+
+p.sdi <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
+
+# Test Faith phylogenetic distance
+FORMULA <- as.formula(paste("FaithPD ~", TEST.VAR, sep = " "))
+compare_means(FORMULA,  data = adat, method = "kruskal")
+
+## If significant:
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  wilcox_test(FORMULA) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_x_position(x = TEST.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Format for 
+if (sum(stat.test$p.adj.signif != "ns") == 0) {
+  stat.sig <- stat.test %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+} else {
+  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+}
+
+# Create plot
+p <- ggboxplot(adat, x = TEST.VAR, y = "FaithPD",
+          color = TEST.VAR, palette = "jco",
+          add = "jitter")
+
+p.fpd <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
+
+# If there is a significant batch effect, then it will be necessary to correct following tests for this effect.
+filename <- paste0("plots/adiv_d8_feces_",TEST.VAR,".png")
+adiv_plot <- ggarrange(p.obs,p.sdi, p.fpd, nrow = 1, labels = c("A)","B)","C)"), common.legend = TRUE,legend = "bottom")
+(adiv_plot_title <- annotate_figure(adiv_plot, top = text_grob("Difference in alpha diversity between treatment at day 8:", color = "red", face = "bold", size = 8)))
+
+
+suppressMessages(ggsave(filename = filename, plot = adiv_plot_title, device = "png"))
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+```
+
+## FEED AND TREAT (Day 8 only feces)
+
+Testing two variables are used when there is a nested aspect in the analysis, for example difference in treatment at each timepoint, that would have the timepoint as the outer variable and treatment as the inner variable
+
+```{r adiv_nested, eval = FALSE}
+
+params <- readRDS("R_objects/Adiv_params.RDS")
+# Load data
+load("R_objects/AlphaDiversity.RData")
+
+INNER.VAR <- "feed"
+OUTER.VAR <- "treatment"
+
+# Subset
+adat <- adat[adat$material == "Feces" & adat$day == 8,]
+
+# Remove samples with incomplete metadata
+adat <- adat[!is.na(adat[,INNER.VAR]) & !is.na(adat[,OUTER.VAR]),]
+adat[,OUTER.VAR] <- as.factor(adat[,OUTER.VAR])
+adat[,INNER.VAR] <- as.factor(adat[,INNER.VAR])
+
+#### Test project variable
+### Observed richness
+fit <- aov(as.formula(paste("Observed ~", OUTER.VAR,"*",INNER.VAR, sep = " ")), data = adat)
+anova(fit)
+TukeyHSD(fit)
+
+## Calculate stats for inner variable
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  group_by(.data[[OUTER.VAR]]) %>%
+  wilcox_test(as.formula(paste("Observed ~", INNER.VAR, sep = " "))) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_xy_position(x = OUTER.VAR, dodge = 0.8) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+## Calculate stats for outer variable
+# Perform pairwise comparisons
+stat.test2 <- adat %>%
+  wilcox_test(as.formula(paste("Observed ~", OUTER.VAR, sep = " "))) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_xy_position(x = OUTER.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Adjust y value for outer p-values
+stat.test2$y.position <- max(stat.test$y.position)*1.1
+
+# Create plot
+p <- ggboxplot(adat, x = OUTER.VAR, y = "Observed",
+          color = INNER.VAR, palette = "jco",
+          add = "jitter")
+
+# Add p-values
+p.obs <- p + stat_pvalue_manual(stat.test, label = "p.adj.format",tip.length = 0)
+p.obs <- p.obs + stat_pvalue_manual(stat.test2, label = "p.adj.format",tip.length = 0.02, step.increase = 0.1)
+
+### Shannon diversity index
+fit <- aov(as.formula(paste("Shannon ~", OUTER.VAR,"*",INNER.VAR, sep = " ")), data = adat)
+anova(fit)
+TukeyHSD(fit)
+
+## Calculate stats for inner variable
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  group_by(.data[[OUTER.VAR]]) %>%
+  wilcox_test(as.formula(paste("Shannon ~", INNER.VAR, sep = " "))) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_xy_position(x = OUTER.VAR, dodge = 0.8) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+## Calculate stats for outer variable
+# Perform pairwise comparisons
+stat.test2 <- adat %>%
+  wilcox_test(as.formula(paste("Shannon ~", OUTER.VAR, sep = " "))) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_xy_position(x = OUTER.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Adjust y value for outer p-values
+stat.test2$y.position <- max(stat.test$y.position)*1.1
+
+# Create plot
+p <- ggboxplot(adat, x = OUTER.VAR, y = "Shannon",
+          color = INNER.VAR, palette = "jco",
+          add = "jitter")
+
+# Add p-values
+p.sha <- p + stat_pvalue_manual(stat.test, label = "p.adj.format",tip.length = 0)
+p.sha <- p.sha + stat_pvalue_manual(stat.test2, label = "p.adj.format",tip.length = 0.02, step.increase = 0.1)
+
+### Create output plot
+filename <- paste0("plots/adiv_d8_",OUTER.VAR,"_",INNER.VAR,".png")
+adiv_plot <- ggarrange(p.obs,p.sha, nrow = 1, labels = c("A)","B)"), common.legend = TRUE,legend = "bottom",align = "hv")
+suppressMessages(ggsave(filename = filename, plot = adiv_plot, device = "png"))
+
+# 
+# # clear the environment and release memory
+# rm(list = ls(all.names = TRUE)[ls(all.names = TRUE) != "params"])
+# invisible(gc())
+
+
+```
+
+
+## FEED (Day 21 only feces)
+
+Here is code to test alpha diversity for the feed categorical variable.
+
+```{r alpha_div_Week_independence, eval=TRUE}
+
+params <- readRDS("R_objects/Adiv_params.RDS")
+# Load data
+load("R_objects/AlphaDiversity.RData")
+TEST.VAR <- "feed"
+
+# Subset
+adat <- adat[adat$material == "Feces" & adat$day == 21,]
+
+# Remove samples with incomplete metadata
+adat <- adat[!is.na(adat[,TEST.VAR]),]
+adat[,TEST.VAR] <- as.factor(adat[,TEST.VAR])
+
+### Determine if any batch effect might influence your data
+# Calculate distribution counts
+freq.t <- with(adat, table(run, feed, exclude = NULL))
+freq.t
+
+# Determine distribution percentages
+prop.table(freq.t,2)*100
+
+# Test if any difference is significant (if not significant the batch effect should be negligible)
+chisq_test(freq.t)
+```
+
+As there is no significant interaction identified by the chi^2^-test, we can ignore the batch effects when analysing the variable.
+
+```{r alpha_div_Week_test, eval=TRUE, fig.cap="Boxplot of alpha diversity"}
+################################################################################
+
+#### Test project variable
+### Observed richness
+FORMULA <- as.formula(paste("Observed ~", TEST.VAR, sep = " "))
+compare_means(FORMULA,  data = adat, method = "kruskal")
+
+## If significant:
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  wilcox_test(FORMULA) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_x_position(x = TEST.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Format for 
+if (sum(stat.test$p.adj.signif != "ns") == 0) {
+  stat.sig <- stat.test %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+} else {
+  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+}
+
+# Create plot
+p <- ggboxplot(adat, x = TEST.VAR, y = "Observed",
+          color = TEST.VAR, palette = "jco",
+          add = "jitter")
+
+p.obs <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
+
+### Test shannon diversity index
+# Run statistical test of batch effect
+FORMULA <- as.formula(paste("Shannon ~", TEST.VAR, sep = " "))
+compare_means(FORMULA,  data = adat, method = "kruskal")
+
+## If significant:
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  wilcox_test(FORMULA) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_x_position(x = TEST.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Format for 
+if (sum(stat.test$p.adj.signif != "ns") == 0) {
+  stat.sig <- stat.test %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+} else {
+  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+}
+# Create plot
+p <- ggboxplot(adat, x = TEST.VAR, y = "Shannon", color = TEST.VAR, palette = "jco", add = "jitter")
+
+p.sdi <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
+
+# Test Faith phylogenetic distance
+FORMULA <- as.formula(paste("FaithPD ~", TEST.VAR, sep = " "))
+compare_means(FORMULA,  data = adat, method = "kruskal")
+
+## If significant:
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  wilcox_test(FORMULA) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_x_position(x = TEST.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Format for 
+if (sum(stat.test$p.adj.signif != "ns") == 0) {
+  stat.sig <- stat.test %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+} else {
+  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+}
+
+# Create plot
+p <- ggboxplot(adat, x = TEST.VAR, y = "FaithPD",
+          color = TEST.VAR, palette = "jco",
+          add = "jitter")
+
+p.fpd <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
+
+# If there is a significant batch effect, then it will be necessary to correct following tests for this effect.
+filename <- paste0("plots/adiv_d21_feces_",TEST.VAR,".png")
+adiv_plot <- ggarrange(p.obs,p.sdi, p.fpd, nrow = 1, labels = c("A)","B)","C)"), common.legend = TRUE,legend = "bottom")
+(adiv_plot_title <- annotate_figure(adiv_plot, top = text_grob("Difference in alpha diversity between feed at day 0:", color = "red", face = "bold", size = 8)))
+adiv_plot_title
+
+suppressMessages(ggsave(filename = filename, plot = adiv_plot_title, device = "png"))
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+```
+
+## TREATMENT (Day 21 only feces)
+
+Here is code to test alpha diversity for the treatment categorical variable.
+
+```{r alpha_div_Week_independence, eval=TRUE}
+
+params <- readRDS("R_objects/Adiv_params.RDS")
+# Load data
+load("R_objects/AlphaDiversity.RData")
+TEST.VAR <- "treatment"
+
+# Subset
+adat <- adat[adat$material == "Feces" & adat$day == 21,]
+
+# Remove samples with incomplete metadata
+adat <- adat[!is.na(adat[,TEST.VAR]),]
+adat[,TEST.VAR] <- as.factor(adat[,TEST.VAR])
+
+### Determine if any batch effect might influence your data
+# Calculate distribution counts
+freq.t <- with(adat, table(run, treatment, exclude = NULL))
+freq.t
+
+# Determine distribution percentages
+prop.table(freq.t,2)*100
+
+# Test if any difference is significant (if not significant the batch effect should be negligible)
+chisq_test(freq.t)
+```
+
+As there is no significant interaction identified by the chi^2^-test, we can ignore the batch effects when analysing the variable.
+
+```{r alpha_div_Week_test, eval=TRUE, fig.cap="Boxplot of alpha diversity"}
+################################################################################
+
+#adat <- adat[adat$feed == "Feces"]
+#### Test project variable
+### Observed richness
+FORMULA <- as.formula(paste("Observed ~", TEST.VAR, sep = " "))
+compare_means(FORMULA,  data = adat, method = "kruskal")
+
+## If significant:
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  wilcox_test(FORMULA) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_x_position(x = TEST.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Format for 
+if (sum(stat.test$p.adj.signif != "ns") == 0) {
+  stat.sig <- stat.test %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+} else {
+  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+}
+
+# Create plot
+p <- ggboxplot(adat, x = TEST.VAR, y = "Observed",
+          color = TEST.VAR, palette = "jco",
+          add = "jitter")
+
+p.obs <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
+
+### Test shannon diversity index
+# Run statistical test of batch effect
+FORMULA <- as.formula(paste("Shannon ~", TEST.VAR, sep = " "))
+compare_means(FORMULA,  data = adat, method = "kruskal")
+
+## If significant:
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  wilcox_test(FORMULA) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_x_position(x = TEST.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Format for 
+if (sum(stat.test$p.adj.signif != "ns") == 0) {
+  stat.sig <- stat.test %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+} else {
+  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+}
+# Create plot
+p <- ggboxplot(adat, x = TEST.VAR, y = "Shannon", color = TEST.VAR, palette = "jco", add = "jitter")
+
+p.sdi <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
+
+# Test Faith phylogenetic distance
+FORMULA <- as.formula(paste("FaithPD ~", TEST.VAR, sep = " "))
+compare_means(FORMULA,  data = adat, method = "kruskal")
+
+## If significant:
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  wilcox_test(FORMULA) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_x_position(x = TEST.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Format for 
+if (sum(stat.test$p.adj.signif != "ns") == 0) {
+  stat.sig <- stat.test %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+} else {
+  stat.sig <- stat.test[stat.test$p.adj.signif != "ns",] %>%
+    add_y_position(step.increase = 0.25) %>%
+    mutate(y.position = seq(min(y.position), max(y.position),length.out = n()))
+}
+
+# Create plot
+p <- ggboxplot(adat, x = TEST.VAR, y = "FaithPD",
+          color = TEST.VAR, palette = "jco",
+          add = "jitter")
+
+p.fpd <- p + stat_pvalue_manual(stat.sig, label = "p.adj.format",tip.length = 0)
+
+# If there is a significant batch effect, then it will be necessary to correct following tests for this effect.
+filename <- paste0("plots/adiv_d21_feces_",TEST.VAR,".png")
+adiv_plot <- ggarrange(p.obs,p.sdi, p.fpd, nrow = 1, labels = c("A)","B)","C)"), common.legend = TRUE,legend = "bottom")
+(adiv_plot_title <- annotate_figure(adiv_plot, top = text_grob("Difference in alpha diversity between treatment at day 0:", color = "red", face = "bold", size = 8)))
+
+
+suppressMessages(ggsave(filename = filename, plot = adiv_plot_title, device = "png"))
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+```
+
+## FEED AND TREAT (Day 21 only feces)
+
+Testing two variables are used when there is a nested aspect in the analysis, for example difference in treatment at each timepoint, that would have the timepoint as the outer variable and treatment as the inner variable
+
+```{r adiv_nested, eval = FALSE}
+
+params <- readRDS("R_objects/Adiv_params.RDS")
+# Load data
+load("R_objects/AlphaDiversity.RData")
+
+INNER.VAR <- "feed"
+OUTER.VAR <- "treatment"
+
+# Subset
+adat <- adat[adat$material == "Feces" & adat$day == 21,]
+
+# Remove samples with incomplete metadata
+adat <- adat[!is.na(adat[,INNER.VAR]) & !is.na(adat[,OUTER.VAR]),]
+adat[,OUTER.VAR] <- as.factor(adat[,OUTER.VAR])
+adat[,INNER.VAR] <- as.factor(adat[,INNER.VAR])
+
+#### Test project variable
+### Observed richness
+fit <- aov(as.formula(paste("Observed ~", OUTER.VAR,"*",INNER.VAR, sep = " ")), data = adat)
+anova(fit)
+TukeyHSD(fit)
+
+## Calculate stats for inner variable
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  group_by(.data[[OUTER.VAR]]) %>%
+  wilcox_test(as.formula(paste("Observed ~", INNER.VAR, sep = " "))) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_xy_position(x = OUTER.VAR, dodge = 0.8) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+## Calculate stats for outer variable
+# Perform pairwise comparisons
+stat.test2 <- adat %>%
+  wilcox_test(as.formula(paste("Observed ~", OUTER.VAR, sep = " "))) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_xy_position(x = OUTER.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Adjust y value for outer p-values
+stat.test2$y.position <- max(stat.test$y.position)*1.1
+
+# Create plot
+p <- ggboxplot(adat, x = OUTER.VAR, y = "Observed",
+          color = INNER.VAR, palette = "jco",
+          add = "jitter")
+
+# Add p-values
+p.obs <- p + stat_pvalue_manual(stat.test, label = "p.adj.format",tip.length = 0)
+p.obs <- p.obs + stat_pvalue_manual(stat.test2, label = "p.adj.format",tip.length = 0.02, step.increase = 0.1)
+
+### Shannon diversity index
+fit <- aov(as.formula(paste("Shannon ~", OUTER.VAR,"*",INNER.VAR, sep = " ")), data = adat)
+anova(fit)
+TukeyHSD(fit)
+
+## Calculate stats for inner variable
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  group_by(.data[[OUTER.VAR]]) %>%
+  wilcox_test(as.formula(paste("Shannon ~", INNER.VAR, sep = " "))) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_xy_position(x = OUTER.VAR, dodge = 0.8) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+## Calculate stats for outer variable
+# Perform pairwise comparisons
+stat.test2 <- adat %>%
+  wilcox_test(as.formula(paste("Shannon ~", OUTER.VAR, sep = " "))) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_xy_position(x = OUTER.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Adjust y value for outer p-values
+stat.test2$y.position <- max(stat.test$y.position)*1.1
+
+# Create plot
+p <- ggboxplot(adat, x = OUTER.VAR, y = "Shannon",
+          color = INNER.VAR, palette = "jco",
+          add = "jitter")
+
+# Add p-values
+p.sha <- p + stat_pvalue_manual(stat.test, label = "p.adj.format",tip.length = 0)
+p.sha <- p.sha + stat_pvalue_manual(stat.test2, label = "p.adj.format",tip.length = 0.02, step.increase = 0.1)
+
+### Create output plot
+filename <- paste0("plots/adiv_d21_",OUTER.VAR,"_",INNER.VAR,".png")
+adiv_plot <- ggarrange(p.obs,p.sha, nrow = 1, labels = c("A)","B)"), common.legend = TRUE,legend = "bottom",align = "hv")
+suppressMessages(ggsave(filename = filename, plot = adiv_plot, device = "png"))
+
+# 
+# # clear the environment and release memory
+# rm(list = ls(all.names = TRUE)[ls(all.names = TRUE) != "params"])
+# invisible(gc())
+
+
+```
+
+```{r day_change}
+
+params <- readRDS("R_objects/Adiv_params.RDS")
+# Load data
+load("R_objects/AlphaDiversity.RData")
+
+# subset
+adat <- adat[adat$material == "Feces",]
+adat_wide <- adat %>% select(feed, treatment, rat, day, Shannon, Observed, FaithPD) %>% pivot_wider(names_from = "day", names_prefix = "day_", values_from = c("Observed","Shannon","FaithPD"))
+
+# 
+head(adat_wide[,grepl("Observed",colnames(adat_wide))])
+adat_wide$Observed_day_12 <- adat_wide$Observed_day_12/adat_wide$Observed_day_0*100
+adat_wide$Observed_day_16 <- adat_wide$Observed_day_16/adat_wide$Observed_day_0*100
+adat_wide$Observed_day_20 <- adat_wide$Observed_day_20/adat_wide$Observed_day_0*100
+adat_wide$Observed_day_21 <- adat_wide$Observed_day_21/adat_wide$Observed_day_0*100
+adat_wide$Observed_day_8 <- adat_wide$Observed_day_8/adat_wide$Observed_day_0*100
+
+adat_wide$FaithPD_day_12 <- adat_wide$FaithPD_day_12/adat_wide$FaithPD_day_0*100
+adat_wide$FaithPD_day_16 <- adat_wide$FaithPD_day_16/adat_wide$FaithPD_day_0*100
+adat_wide$FaithPD_day_20 <- adat_wide$FaithPD_day_20/adat_wide$FaithPD_day_0*100
+adat_wide$FaithPD_day_21 <- adat_wide$FaithPD_day_21/adat_wide$FaithPD_day_0*100
+adat_wide$FaithPD_day_8 <- adat_wide$FaithPD_day_8/adat_wide$FaithPD_day_0*100
+
+adat_wide$Shannon_day_12 <- adat_wide$Shannon_day_12/adat_wide$Shannon_day_0*100
+adat_wide$Shannon_day_16 <- adat_wide$Shannon_day_16/adat_wide$Shannon_day_0*100
+adat_wide$Shannon_day_20 <- adat_wide$Shannon_day_20/adat_wide$Shannon_day_0*100
+adat_wide$Shannon_day_21 <- adat_wide$Shannon_day_21/adat_wide$Shannon_day_0*100
+adat_wide$Shannon_day_8 <- adat_wide$Shannon_day_8/adat_wide$Shannon_day_0*100
+
+adat_long <- adat_wide %>% pivot_longer(names_to = "TMP", values_to = "Adiv_change",cols = contains("_day_"))
+
+for (i in seq(nrow(adat_long))){
+  adat_long$Index[i] <-unlist(str_split(adat_long$TMP[i],"_"))[1]
+  adat_long$Day[i] <-unlist(str_split(adat_long$TMP[i],"_"))[3]
+
+}
+head(adat_long)
+adat_long$Day <- as.numeric(adat_long$Day)
+plot_feed_treat <- ggplot(adat_long[!is.na(adat_long$Adiv_change) & adat_long$Day != 0,], aes(Day, Adiv_change, group = rat, color = treatment)) + geom_point() + geom_line() + facet_grid(feed~Index)
+plot_treat_feed <- ggplot(adat_long[!is.na(adat_long$Adiv_change) & adat_long$Day != 0,], aes(Day, Adiv_change, group = rat, color = feed)) + geom_point() + geom_line() + facet_grid(treatment~Index)
+
+adat_long$feed_treat <- with(adat_long, paste(feed, treatment, sep = "_"))
+
+ggplot(adat_long[!is.na(adat_long$Adiv_change) & adat_long$Day != 0,], aes(feed, Adiv_change, color = treatment)) + geom_boxplot() + facet_grid(Index~Day)
+
+```
+## DAY AND TREAT (NESTED)
+
+Testing two variables are used when there is a nested aspect in the analysis, for example difference in treatment at each timepoint, that would have the timepoint as the outer variable and treatment as the inner variable
+
+```{r adiv_nested, eval = FALSE}
+
+params <- readRDS("R_objects/Adiv_params.RDS")
+# Load data
+load("R_objects/AlphaDiversity.RData")
+
+OUTER.VAR <- "feed"
+INNER.VAR <- "day"
+
+# Subset
+adat <- adat[adat$material == "Feces" & adat$day != 0,]
+
+# Remove samples with incomplete metadata
+adat <- adat[!is.na(adat[,INNER.VAR]) & !is.na(adat[,OUTER.VAR]),]
+adat[,OUTER.VAR] <- as.factor(adat[,OUTER.VAR])
+adat[,INNER.VAR] <- as.factor(adat[,INNER.VAR])
+
+#### Test project variable
+### Observed richness
+fit <- aov(as.formula(paste("samplePFOS_ug ~", OUTER.VAR,"*",INNER.VAR, sep = " ")), data = adat)
+anova(fit)
+TukeyHSD(fit)
+
+## Calculate stats for inner variable
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  group_by(.data[[OUTER.VAR]]) %>%
+  wilcox_test(as.formula(paste("samplePFOS_ug ~", INNER.VAR, sep = " "))) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_xy_position(x = OUTER.VAR, dodge = 0.8) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+## Calculate stats for outer variable
+# Perform pairwise comparisons
+stat.test2 <- adat %>%
+  wilcox_test(as.formula(paste("samplePFOS_ug ~", OUTER.VAR, sep = " "))) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_xy_position(x = OUTER.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Adjust y value for outer p-values
+stat.test2$y.position <- max(stat.test$y.position)*1.1
+
+# Create plot
+p <- ggboxplot(adat, x = OUTER.VAR, y = "samplePFOS_ug",
+          color = INNER.VAR, palette = "jco",
+          add = "jitter")
+
+# Add p-values
+p.obs <- p + stat_pvalue_manual(stat.test, label = "p.adj.format",tip.length = 0)
+p.obs <- p.obs + stat_pvalue_manual(stat.test2, label = "p.adj.format",tip.length = 0.02, step.increase = 0.1)
+
+### Shannon diversity index
+fit <- aov(as.formula(paste("Shannon ~", OUTER.VAR,"*",INNER.VAR, sep = " ")), data = adat)
+anova(fit)
+TukeyHSD(fit)
+
+## Calculate stats for inner variable
+# Perform pairwise comparisons
+stat.test <- adat %>%
+  group_by(.data[[OUTER.VAR]]) %>%
+  wilcox_test(as.formula(paste("Shannon ~", INNER.VAR, sep = " "))) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_xy_position(x = OUTER.VAR, dodge = 0.8) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+## Calculate stats for outer variable
+# Perform pairwise comparisons
+stat.test2 <- adat %>%
+  wilcox_test(as.formula(paste("Shannon ~", OUTER.VAR, sep = " "))) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_xy_position(x = OUTER.VAR) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+
+# Adjust y value for outer p-values
+stat.test2$y.position <- max(stat.test$y.position)*1.1
+
+# Create plot
+p <- ggboxplot(adat, x = OUTER.VAR, y = "Shannon",
+          color = INNER.VAR, palette = "jco",
+          add = "jitter")
+
+# Add p-values
+p.sha <- p + stat_pvalue_manual(stat.test, label = "p.adj.format",tip.length = 0)
+p.sha <- p.sha + stat_pvalue_manual(stat.test2, label = "p.adj.format",tip.length = 0.02, step.increase = 0.1)
+
+### Create output plot
+filename <- paste0("plots/adiv_",OUTER.VAR,"_",INNER.VAR,".png")
+adiv_plot <- ggarrange(p.obs,p.sha, nrow = 1, labels = c("A)","B)"), common.legend = TRUE,legend = "bottom",align = "hv")
+suppressMessages(ggsave(filename = filename, plot = adiv_plot, device = "png"))
+
+# 
+# # clear the environment and release memory
+# rm(list = ls(all.names = TRUE)[ls(all.names = TRUE) != "params"])
+# invisible(gc())
 
 
 ```
@@ -1330,14 +1722,29 @@ params <- readRDS("R_objects/Adiv_params.RDS")
 load("R_objects/AlphaDiversity.RData")
 
 # create vector with the relevant variables (can also be subset by column indeces)
-CON.VARS <- INDECES
+# Select variables
+num_var <- adat %>% select_if(is.numeric) %>% select(where(~n_distinct(.,na.rm = t) > 1)) %>% colnames()
+
+num_var <- num_var[c(4,8:15)]
+
+num_dat <- adat[,colnames(adat) %in% num_var]
+
+# Determine if variables are normally distributed
+num_var %>% 
+  as_tibble() %>% 
+  rowwise %>% 
+  mutate(shapiro = list(
+    adat[,value] %>% shapiro.test()
+    ),
+    shapiro_pval = shapiro$p.value
+    )
 
 # Plot all variables against each other
-pairs(adat[,CON.VARS], pch = 19,  cex = 0.5,
+pairs(num_dat, pch = 19,  cex = 0.5,
       lower.panel=NULL)
 
 # Run Pearson test
-(corrmat <- cor(adat[,CON.VARS], method = "pearson", use = "complete.obs"))
+(corrmat <- cor(num_dat, method = "spearman", use = "complete.obs"))
 
 # Create heatmap
 corrmat_rounded <- round(corrmat, 2)
@@ -1384,12 +1791,15 @@ params <- readRDS("R_objects/Adiv_params.RDS")
 load("R_objects/AlphaDiversity.RData")
 
 # store variables
-INDEX <- "FaithPD"
-VAR <- "DNA_Conc"
+INDEX <- "samplePFOS_ug"
+VAR <- "day"
+
+# Subset
+adat <- adat[adat$material == "Feces" & adat$day != 0,]
 
 # Visualise data
-ggscatter(adat, x = VAR, y = INDEX, # basic plot
-          facet.by = params$batch, # This line can be commented out if alpha diversity is independent of batches
+ggscatter(adat[adat$treatment != "CTRL",], x = VAR, y = INDEX, # basic plot
+          facet.by = "feed", # This line can be commented out if alpha diversity is independent of batches
           add = "reg.line", conf.int = TRUE, # Adds a trendline with confidence interval
           cor.coef = TRUE, cor.method = "pearson") +  # performs a pearson test and show p-value 
   ggtitle("Preliminary visualization of data")

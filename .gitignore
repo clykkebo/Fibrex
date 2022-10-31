@@ -38,10 +38,9 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+.Rhistory
 
 # Output from the pipeline (remove if sharing your work)
-R_objects/
-plots/
 tables/
 scripts/
 input/
