@@ -189,6 +189,36 @@ invisible(gc())
 
 ```
 
+```{r calc_bray_subs, eval=FALSE, echo=TRUE}
+params <- readRDS("R_objects/bdiv_params.RDS")
+# load
+load("R_objects/Phyloseq_rarefied.Rdata")
+load("R_objects/UniF.RData")
+
+tmp.dist <- as.matrix(unif.dist)
+# Create subset
+phy.sub <- subset_samples(phy.rare, material == "Feces" & day %in% c(0,8,21))
+
+SUBS <- sample_names(phy.sub)
+
+tmp.sub.dist <- tmp.dist[SUBS, SUBS]
+unif.sub.dist <- as.dist(tmp.sub.dist,diag = TRUE, upper = TRUE)
+
+# Calculate UniFrac distances
+
+# Calculate PCoA data
+unif.sub.pcoa <- ordinate(phy.sub, method = "PCoA",distance = unif.sub.dist)
+unif.sub.nmds <- metaMDS(unif.sub.dist, k = 5, trymax = 1000)
+
+# Save distance objects
+save(phy.sub, unif.sub.dist, unif.sub.nmds, unif.sub.pcoa, file = "R_objects/unif.sub.RData")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
 ### WEIGHTED UNIFRAC
 
 The unique fraction metric, or UniFrac, measures the phylogenetic distance between sets of taxa in a phylogenetic tree as the fraction of the branch length of the tree that leads to descendants from either one environment or the other, but not both [(Lozupone & Knight, 2005)](https://doi.org/10.1128/AEM.71.12.8228-8235.2005). 
@@ -218,6 +248,37 @@ invisible(gc())
 
 ```
 
+
+```{r calc_wUniF_subs, eval=FALSE, echo=TRUE}
+params <- readRDS("R_objects/bdiv_params.RDS")
+# load
+load(params$input)
+load("R_objects/wUniF.RData")
+
+tmp.dist <- as.matrix(wuf.dist)
+# Create subset
+phy.sub <- subset_samples(phy, material == "Feces" & day %in% c(0,8,21))
+
+SUBS <- sample_names(phy.sub)
+
+tmp.sub.dist <- tmp.dist[SUBS, SUBS]
+wuf.sub.dist <- as.dist(tmp.sub.dist,diag = TRUE, upper = TRUE)
+
+# Calculate UniFrac distances
+
+# Calculate PCoA data
+wuf.sub.pcoa <- ordinate(phy.sub, method = "PCoA",distance = wuf.sub.dist)
+wuf.sub.nmds <- metaMDS(wuf.sub.dist, k = 5, trymax = 1000)
+
+# Save distance objects
+save(phy.sub, wuf.sub.dist, wuf.sub.nmds, wuf.sub.pcoa, file = "R_objects/wUniF.sub.RData")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
 ### BRAY-CURTIS
 
 Bray-Curtis dissimilarity index (as implemented by the vegan package) is the sum of abundance difference for each species/ASV, divided by theoretical maximum difference between the samples if no ASV overlapped. The formula used is: $$d_{jk} = \frac{\sum|n_{ij}-n_{ik}|}{\sum(n_{ij}+n_{ik})}$$ Bray-Curtis dissimilarity is not a true distance metric as it does not adhere to the [triangle inequality](), but is often used to compare microbiomes. Bray-Curtis dissimilarities are based on the assumption that measurements are taken from equal areas, so differences in total counts between samples will bias the metric. As differences in sequences depth is due to differences in the lab procedures and not biological differences, we should transform our counts to relative abundances before calculating Bray-Curtis dissimilarities. By transforming the data to abundances no data is lost, but rarefied data can also be used.
@@ -239,6 +300,36 @@ bray.nmds <- metaMDS(bray.dist, k = 5, trymax = 1000)
 
 # Save distance objects
 save(bray.dist, bray.nmds, bray.pcoa, file = "R_objects/Bray.RData")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+```{r calc_bray_subs, eval=FALSE, echo=TRUE}
+params <- readRDS("R_objects/bdiv_params.RDS")
+# load
+load(params$input)
+load("R_objects/bray.RData")
+
+tmp.dist <- as.matrix(bray.dist)
+# Create subset
+phy.sub <- subset_samples(phy, material == "Feces" & day %in% c(0,8,21))
+
+SUBS <- sample_names(phy.sub)
+
+tmp.sub.dist <- tmp.dist[SUBS, SUBS]
+bray.sub.dist <- as.dist(tmp.sub.dist,diag = TRUE, upper = TRUE)
+
+# Calculate UniFrac distances
+
+# Calculate PCoA data
+bray.sub.pcoa <- ordinate(phy.sub, method = "PCoA",distance = bray.sub.dist)
+bray.sub.nmds <- metaMDS(bray.sub.dist, k = 5, trymax = 1000)
+
+# Save distance objects
+save(phy.sub, bray.sub.dist, bray.sub.nmds, bray.sub.pcoa, file = "R_objects/bray.sub.RData")
 
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE))
@@ -390,7 +481,7 @@ if (METRIC == "UniF") {
 }
 
 # Extract metadata from phyloseq
-mdat <- data.frame(sample_data(phy))
+mdat <- data.frame(sample_data(phy.sub))
 
 # If a variable consist of numbers, but represent distinct groups remember to make it into a factor
 mdat[,VAR] <- as.factor(mdat[,VAR])
@@ -413,11 +504,11 @@ boxplot(bdisp)
 plot(HSD)
 
 # Run PERMANOVA for the variable
-FORMULA <- as.formula(paste("dist.used ~", VAR, sep = " "))
-(perm.test <- adonis2(FORMULA, data = mdat, permutations = 9999,na.action = na.omit))
+mdat$day <- as.factor(mdat$day)
+(perm.test <- adonis2(unif.sub.dist ~ feed+day+treatment, data = mdat, permutations = 9999,na.action = na.omit))
 
 # Use vegan to test how well metadata fits ordination
-fit.out <- envfit(nmds.used, mdat[,c("feed","dnaC")],na.rm=TRUE)
+fit.out <- envfit(unif.sub.nmds, mdat[,c("feed","treatment","day")],na.rm=TRUE)
 fit.out
 ```
 
@@ -455,36 +546,67 @@ The first plot highlights the location of each group on the first 5 axis. Based 
 
 ```{r ordination_categorical, eval=TRUE}
 # Create plots of eigenvalues for PCoA plots
-pcoa.tab <- plot_ordination(phy, pcoa.used,axes = 1:5,justDF = TRUE)
-nmds.tab <- plot_ordination(phy, nmds.used,axes = 1:5,justDF = TRUE)
+unif.pcoa.tab <- plot_ordination(phy.sub, unif.sub.pcoa,axes = 1:5,justDF = TRUE)
+unif.nmds.tab <- plot_ordination(phy.sub, unif.sub.nmds,axes = 1:5,justDF = TRUE)
+wunif.pcoa.tab <- plot_ordination(phy.sub, wuf.sub.pcoa,axes = 1:5,justDF = TRUE)
+wunif.nmds.tab <- plot_ordination(phy.sub, wuf.sub.nmds,axes = 1:5,justDF = TRUE)
+bray.pcoa.tab <- plot_ordination(phy.sub, bray.sub.pcoa,axes = 1:5,justDF = TRUE)
+bray.nmds.tab <- plot_ordination(phy.sub, bray.sub.nmds,axes = 1:5,justDF = TRUE)
 
 # Reformat tables to create one common table
-colnames(nmds.tab)[1:5] <- c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5")
+colnames(unif.nmds.tab)[1:5] <- c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5")
+colnames(wunif.nmds.tab)[1:5] <- c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5")
+colnames(bray.nmds.tab)[1:5] <- c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5")
 
-nmds.tab$ordination <- "nmds"
-pcoa.tab$ordination <- "pcoa"
+unif.nmds.tab$ordination <- "nmds"
+unif.pcoa.tab$ordination <- "pcoa"
+wunif.nmds.tab$ordination <- "nmds"
+wunif.pcoa.tab$ordination <- "pcoa"
+bray.nmds.tab$ordination <- "nmds"
+bray.pcoa.tab$ordination <- "pcoa"
 
-ord.tab <- rbind(nmds.tab,pcoa.tab)
-ord.tab$feed <- as.factor(ord.tab$feed)
+unif.nmds.tab$metric <- "unif"
+unif.pcoa.tab$metric <- "unif"
+wunif.nmds.tab$metric <- "wuf"
+wunif.pcoa.tab$metric <- "wuf"
+bray.nmds.tab$metric <- "bray"
+bray.pcoa.tab$metric <- "bray"
+
+
+ord.tab <- rbind(unif.nmds.tab,unif.pcoa.tab,wunif.nmds.tab,wunif.pcoa.tab,bray.nmds.tab,bray.pcoa.tab)
+ord.tab$day <- as.factor(ord.tab$day)
 
 # Melt axis to be in one variable
 axis.tab <- pivot_longer(data = ord.tab, cols = c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5"), names_to = "Axis", values_to = "position")
 
 # Plot positions on axes
-ggplot(axis.tab, aes_string(x = "ordination", y = "position", fill = VAR)) +
+ggplot(axis.tab, aes_string(x = "ordination", y = "position", fill = "feed_treat")) +
   geom_boxplot() +
-  facet_grid(Axis~.) +
+  facet_grid(Axis~metric) +
   coord_flip() + 
   theme_pubr(legend = "bottom") + ggsci::scale_fill_jco()
 
 # Create ordination plots
-plot.beta <- ggplot(ord.tab[!is.na(ord.tab[,VAR]),], aes_string(x = "Axis.1", y = "Axis.2", color = VAR)) +
+plot.unif <- ggplot(ord.tab[ord.tab$metric == "unif",], aes(x = Axis.1, y = Axis.2, color = feed_treat)) +
   geom_point() + 
-  facet_grid(.~ordination, scales = "free") + 
+  facet_grid(day~ordination, scales = "free") + 
   theme_pubr(legend = "bottom") + 
-  labs(color=VAR) +
-  stat_ellipse() #+ ggsci::scale_color_jco()
-plot.beta
+  labs(color="feed") +
+  stat_ellipse() + ggsci::scale_color_jco() + ggtitle("Unweighted UniFrac")
+plot.wuf <- ggplot(ord.tab[ord.tab$metric == "wuf",], aes(x = Axis.1, y = Axis.2, color = feed_treat)) +
+  geom_point() + 
+  facet_grid(day~ordination, scales = "free") + 
+  theme_pubr(legend = "bottom") + 
+  labs(color="feed") +
+  stat_ellipse() + ggsci::scale_color_jco() + ggtitle("Weighted UniFrac")
+plot.bray <- ggplot(ord.tab[ord.tab$metric == "bray",], aes(x = Axis.1, y = Axis.2, color = feed_treat)) +
+  geom_point() + 
+  facet_grid(day~ordination, scales = "free") + 
+  theme_pubr(legend = "bottom") + 
+  labs(color="feed") +
+  stat_ellipse() + ggsci::scale_color_jco() + ggtitle("Bray-Curtis")
+ggsave()
+ggarrange(plot.unif, plot.wuf, plot.bray, nrow = 1)
 ```
 
 ### FIT VARIABLES TO ORDINATION
