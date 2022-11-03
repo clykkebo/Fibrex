@@ -330,7 +330,7 @@ FORMULA <- as.formula(paste("bray.dist ~ ", params$batch, sep = ""))
 batch.PERM <- adonis2(FORMULA, data = mdat)
 
 # Compare the betadiversity dispertion for the batch variable
-batch.bdisp <- betadisper(bray.dist, mdat$Run)
+batch.bdisp <- betadisper(bray.dist, mdat[,params$batch])
 anova(batch.bdisp)
 
 # If significant a post hoc test can compare pairwise
@@ -364,7 +364,7 @@ params <- readRDS("R_objects/bdiv_params.RDS")
 METRIC <- "UniF"
 
 # Choose variable 
-VAR <- "Week_clean"
+VAR <- "feed"
 
 # Load data
 load(params$input)
@@ -417,7 +417,7 @@ FORMULA <- as.formula(paste("dist.used ~", VAR, sep = " "))
 (perm.test <- adonis2(FORMULA, data = mdat, permutations = 9999,na.action = na.omit))
 
 # Use vegan to test how well metadata fits ordination
-fit.out <- envfit(nmds.used, mdat[,c("Week_clean","DNA_Conc")],na.rm=TRUE)
+fit.out <- envfit(nmds.used, mdat[,c("feed","dnaC")],na.rm=TRUE)
 fit.out
 ```
 
@@ -465,7 +465,7 @@ nmds.tab$ordination <- "nmds"
 pcoa.tab$ordination <- "pcoa"
 
 ord.tab <- rbind(nmds.tab,pcoa.tab)
-ord.tab$Week_clean <- as.factor(ord.tab$Week_clean)
+ord.tab$feed <- as.factor(ord.tab$feed)
 
 # Melt axis to be in one variable
 axis.tab <- pivot_longer(data = ord.tab, cols = c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5"), names_to = "Axis", values_to = "position")

@@ -1543,11 +1543,17 @@ for (i in seq(nrow(adat_long))){
 head(adat_long)
 adat_long$Day <- as.numeric(adat_long$Day)
 plot_feed_treat <- ggplot(adat_long[!is.na(adat_long$Adiv_change) & adat_long$Day != 0,], aes(Day, Adiv_change, group = rat, color = treatment)) + geom_point() + geom_line() + facet_grid(feed~Index)
+
+suppressMessages(ggsave(filename = "plots/plot_feed_treat.png", plot = plot_feed_treat, device = "png"))
+
 plot_treat_feed <- ggplot(adat_long[!is.na(adat_long$Adiv_change) & adat_long$Day != 0,], aes(Day, Adiv_change, group = rat, color = feed)) + geom_point() + geom_line() + facet_grid(treatment~Index)
+suppressMessages(ggsave(filename = "plots/plot_treat_feed.png", plot = plot_treat_feed, device = "png"))
 
 adat_long$feed_treat <- with(adat_long, paste(feed, treatment, sep = "_"))
 
-ggplot(adat_long[!is.na(adat_long$Adiv_change) & adat_long$Day != 0,], aes(feed, Adiv_change, color = treatment)) + geom_boxplot() + facet_grid(Index~Day)
+plot_treat_feed_day <- ggplot(adat_long[!is.na(adat_long$Adiv_change) & adat_long$Day != 0,], aes(feed, Adiv_change, color = treatment)) + geom_boxplot() + facet_grid(Index~Day)
+
+suppressMessages(ggsave(filename = "plots/plot_treat_feed_day.png", plot = plot_treat_feed_day, device = "png"))
 
 ```
 ## DAY AND TREAT (NESTED)
@@ -1771,7 +1777,7 @@ ggplot(melted_corrmat_rounded, aes(x = Var1, y = Var2, fill = dist)) +
 
 # The significance of any correlations can the be tested individually
 with(adat, cor.test(Chao1,Observed, method = "pearson", use = "complete.obs"))
-with(adat, cor.test(Chao1, DNA_Conc, method = "pearson", use = "complete.obs"))
+with(adat, cor.test(Chao1, dnaC, method = "pearson", use = "complete.obs"))
 
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE)[ls(all.names = TRUE) != "params"])
