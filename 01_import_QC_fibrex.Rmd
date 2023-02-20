@@ -1,6 +1,6 @@
 ---
-title: "Fibrex Microbiome Import and QC"
-author: "masmo, caly"
+title: "Fibrex Import and QC"
+author: "caly"
 date: "`r Sys.Date()`"
 output:
   rmdformats::readthedown:
@@ -18,12 +18,22 @@ params:
     input: "input/fibrex.merged.phyloseq_object.RData"
     meta: "input/metadata_fibrex.csv"
     neg: "WTRX|WTRP|negative"
-    batch: "run"
+    batch: "Run"
+    indeces: "Observed|Evenness|Shannon|FaithPD|Chao1"
 ---
 
-# GMH ASV ANALYSIS PIPELINE
+# INFO
 
-This Rmarkdown contains the commands necessary to perform initial import and QC of the output from the DF_GMH_PIPELINE There will be things that should be updated to fit the exact project. It is important that metadata is loaded correctly and it should contain a variable identifying negative controls and mock samples. I recommend visiting the ["Analysis of community ecology data in R"](https://www.davidzeleny.net/anadat-r/doku.php/en:start) to read about the theory behind the alpha and beta diversity and examples of the necessary R-code to execute them. For analyses of differential abundance I will use the DAtest package [(Russel et al., 2018)](https://www.biorxiv.org/content/10.1101/241802v1). Another excellent source of help is the R [cheat-sheets](https://www.rstudio.com/resources/cheatsheets/).
+This template contains the commands necessary to perform initial import and QC of the output from the DF_GMH_PIPELINE.
+
+This template should not be run as is, but update to fit the specific project.\
+Suggested workflow:
+
+-   Update header above
+
+-   Update and run commands sequentially
+
+-   When the whole template has been updated, knit it.
 
 ```{r setup, eval=TRUE, echo=TRUE, message=FALSE,warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE ,warning = FALSE, message = FALSE)
@@ -37,13 +47,6 @@ library(ggpubr)
 library(vegan)
 library(phangorn)
 library(kableExtra)
-
-# Create used folders if missing
-if (!file.exists("R_objects")) dir.create(file.path(getwd(), "R_objects"))
-if (!file.exists("plots")) dir.create(file.path(getwd(), "plots"))
-if (!file.exists("tables")) dir.create(file.path(getwd(), "tables"))
-if (!file.exists("scripts")) dir.create(file.path(getwd(), "scripts"))
-if (!file.exists("output")) dir.create(file.path(getwd(), "output"))
 
 # Save params
 saveRDS(params, file = "R_objects/import_params.RDS")
@@ -134,7 +137,7 @@ Alpha diversity is sensitive to sequencing depth, especially richness based metr
 ```{r Alpha_diversity_functions, eval=TRUE, echo=TRUE}
 
 # Rarefaction curves
-Rcurve_data <- function(physeq, ntables=10, step=250,maxdepth = max(sample_sums(physeq)), methods=c("Observed","Chao1","ACE","Shannon"), seedstart=500, verbose=FALSE) {
+Rcurve_data <- function(physeq, ntables=10, step=250,maxdepth = max(sample_sums(physeq)), methods=c("Observed","Chao1","ACE","Shannon","Evenness"), seedstart=500, verbose=FALSE) {
   require("vegan")
   
   # prep list of 
@@ -150,7 +153,7 @@ Rcurve_data <- function(physeq, ntables=10, step=250,maxdepth = max(sample_sums(
 }
 
 # Calculate alpha diversity
-Calculate_alpha_div <- function(physeq, ntables=100, depth = round(min(sample_sums(physeq))*0.9), methods=c("Observed","Chao1","ACE","Shannon"), seedstart=500, verbose=FALSE) {
+Calculate_alpha_div <- function(physeq, ntables=100, depth = round(min(sample_sums(physeq))*0.9), methods=c("Observed","Chao1","ACE","Shannon","Evenness"), seedstart=500, verbose=FALSE) {
   require("vegan")
   
   # remove samples below depth
@@ -230,7 +233,7 @@ Calculate_alpha_div <- function(physeq, ntables=100, depth = round(min(sample_su
     
     if ("Evenness" %in% methods){
       # Calculate observed richness for each rep of sample z
-      sha <- diversity(rare_tab, index = "shannon")
+      sha <- vegan::diversity(rare_tab, index = "shannon")
       obs <- rowSums(rare_tab != 0)
       adiv <- sha/log(obs)
       # Save mean and sd of observed richness
@@ -256,23 +259,24 @@ invisible(gc()) #free up memory and report the memory usage.
 
 ```
 
-# IMPORT AND QC
 
-This section will import the ASV data, add metadata, and run decontam
+# IMPORT AND MERGE
 
-## PIPELINE DATA
+This section will import and merge phyloseq and metadata
 
-First step is to load the output from the pipeline. The only part of this section that should be edited is the "grepl" commands to ensure that negative controls and mock samples are properly identified
+## SEQUENCING DATA
 
-```{r Load_pipeline_data, eval = TRUE}
+First step is to load the output from the pipeline. This section generates a unique sample identifiers that will be used to merge with metadata in the following section. The two additional variables created ("is.neg" and "type") will be used for decontamination later.
+
+```{r Load-sequencing-data, eval = TRUE}
 
 params <- readRDS("R_objects/import_params.RDS")
 # Load analysis data
 load(params$input)
 
 # Create sample ID variable and use it as sample_names
-sample_data(phy)$ID <- with(sample_data(phy), paste(Seq_run,Sample, sep = "_"))
-sample_names(phy) <- sample_data(phy)$ID
+sample_data(phy)$SampleID <- with(sample_data(phy), paste(Seq_run,Sample, sep = "_"))
+sample_names(phy) <- sample_data(phy)$SampleID
 
 # Create variables identifying negative controls. If negative controls are named differently update this option, "|" can be used to list more options
 sample_data(phy)$is.neg <- grepl(params$neg,sample_data(phy)$Sample,ignore.case = TRUE)
@@ -287,39 +291,49 @@ phy.org <- phy
 
 ```
 
-Next step is to load the metadata for the project. This step will have to be edited to fit the files and names used.
-It can be easier to use the build in import function to import correctly and then save the created code here to reproduce import later (File > Import Dataset > From Text (readr)).
+## METADATA
 
-```{r Load_meta_data_a, eval = TRUE}
+Next step is to load the metadata for the project. This step will have to be edited to fit the files and names used. It can be easier to use the build in import function to import correctly and then save the created code here to reproduce import later (File \> Import Dataset \> From Text (readr)).
+
+The section also creates a variable that matches the unique sample names and highlights if there are any mismatches between the sequencing and meta data.
+
+```{r Load-metadata, eval = TRUE}
 # export sample data
 tmp <- data.frame(sample_data(phy))
 
 # Load metadata - This part will be specific to the project
-meta <- read.csv(params$meta, header = T, sep = ";")
-#meta <- read_csv("input/CEFTA_metadata.csv", 
-#                 col_types = cols(`Nedfrosset dato` = col_datetime(format = "%d-%m-%Y"), 
-#                                  Week_clean = col_factor(levels = c("0", "1", "8")), FMT = col_integer(), 
-#                                  Batch = col_factor(levels = c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"))))
+meta <- read_csv(params$meta)
 
 # Create an identical ID variable to use for merging
-meta$ID <- with(meta, paste(run,sampleID, sep = "_"))
+meta$SampleID <- with(meta, paste(Run,sample_name, sep = "_"))
 
 # Verify that all the IDs are identical between the datasets
-nrow(tmp[!tmp$ID %in% meta$ID,])
-tmp[!tmp$ID %in% meta$ID,]
-nrow(meta[!meta$ID %in% tmp$ID,])
+if (nrow(anti_join(tmp, meta, by = "SampleID")) != 0) {
+  anti_join(tmp, meta, by = "SampleID")
+} else message("All samples from sequencing data matched in metadata")
+
+if (nrow(anti_join(meta, tmp, by = "SampleID")) != 0) {
+  anti_join(meta, tmp, by = "SampleID")
+} else message("All samples from metadata matched in sequencing data")
 
 # Check which, if any columns, are in both tables
-shared_cols <- colnames(tmp)[colnames(tmp) %in% colnames(meta)] %>% .[. != "ID"]
+shared_cols <- colnames(tmp)[colnames(tmp) %in% colnames(meta)] %>% .[. != "SampleID"]
+
+# Print shared columns
+if (length(shared_cols) != 0) message("The following columns are present in both sequencing and metadata:\n", knitr::combine_words(shared_cols))
 ```
 
-```{r Load_meta_data_b, eval = TRUE}
+## MERGE DATA
+
+This section will now add the metadata to the sequencing data and save the resulting phyloseq file.
+
+```{r merge-data, eval = TRUE}
 # If any other columns than ID is in both, consider if you want it removed
 meta <- meta %>% select(-one_of(shared_cols))
 
 # When you are sure that all match, then merge and add to phyloseq
-mtmp <- left_join(tmp,meta,by="ID")
-row.names(mtmp) <- mtmp$ID
+mtmp <- left_join(tmp,meta,by="SampleID")
+row.names(mtmp) <- mtmp$SampleID
 
 # Add the merged data to the phyloseq object
 sample_data(phy) <- mtmp
@@ -333,20 +347,28 @@ invisible(gc()) #free up memory and report the memory usage.
 
 ```
 
+*Merged phyloseq object saved in: "**R_objects/input.Rdata**"*
+
+# CLEAN AND QC
+
+This section cleans the taxonomic table and decontaminate the sequencing data.
+
 ## CLEAN TAXA
 
 Many ASVs lacks species level, or higher, classification. Later steps will use the taxonomic annotation at various levels and some will remove taxa without classification. To avoid data being removed it is necessary to replace missing values with relevant information, this will be the highest available classification. At the same time, ASVs that could not be classified to Phylum or even Kingdom level is likely to be sequencing artifacts and will be removed. For some analyses it might be relevant to only include taxa that has been properly classified, so the level at which unclassified taxa are removed can be modified.
 
-```{r Clean_taxa, eval = TRUE}
+```{r Clean-taxa, eval = TRUE}
 ################################################################################
 # load data 
 load("R_objects/input.Rdata")
-
 # Load function
 load("scripts/clean_tax.Rdata")
 
 # Clean phyloseq object
 phy <- clean_taxa(phy, tax_remove = "Phylum", verbose = TRUE)
+
+# Remove Cyanobacteria/Chloroplast
+phy <- subset_taxa(phy, Phylum != "Cyanobacteria/Chloroplast")
 
 # Save cleaned phyloseq object
 save(phy.org, phy, file="R_objects/cleaned.Rdata")
@@ -359,9 +381,107 @@ invisible(gc()) #free up memory and report the memory usage.
 
 ## DECONTAMINATE
 
-This section runs decontam to remove likely contaminants from the data set [@decontam]. The decontamination should be performed as harshly as makes sense for each specific project, but I suggest using the percent of reads removed as an indicator of what harshness is appropriate. If the project contains samples from multiple batches or runs this information should be included using the "batch" variable. How the contaminants from each batch is combined is defined using the variable "batch.combine": - "minimum" = The minimum batch probabilities is used to identify contaminants - "product" = The product of the batch probabilities is used to identify contaminants - "fisher" = The batch probabilities are combined with Fishers method and used to identify contaminants Decontam can identify contaminants based on the initial DNA concentration (frequency) and/or based on prevalence in samples and controls. Frequency based decontam assumes a negative correlation between DNA concentration and contaminant abundance. Prevalence based decontam assumes higher abundance of contaminants in controls. As for batches, the two methods can be used separately or combined. The variable "method" defines how decontam will run.
+This section runs decontam to remove likely contaminants from the data set [@decontam]. Frequency based decontam assumes a negative correlation between DNA concentration and contaminant abundance, while prevalence based decontam assumes higher abundance of contaminants in controls. If the project contains samples from multiple batches, or runs, this information should be included using the "batch" variable.
 
-```{r decontam_multiple, eval = TRUE}
+-   If your metadata contains **either** initial DNA concentration **OR** negative controls indication, **AND** the samples have been processed and sequenced in one batch, then use the **SINGLE SETTING** section.
+
+-   If your metadata contains **both** initial DNA concentration **AND** negative controls indication, **OR** the samples have been processed and sequenced in more than one batch, then use the **MULTIPLE SETTINGS** section.
+
+### SINGLE SETTING
+
+Only one of the parts between the hashtags should be used. **REMEMBER** to delete the other part.
+
+```{r Decontam-single, eval = FALSE}
+params <- readRDS("R_objects/import_params.RDS")
+# load data 
+load("R_objects/cleaned.Rdata")
+df <- data.frame(sample_data(phy))
+
+############################################################################
+
+### If using frequency based method
+df <- df[order(df$dna_conc),]
+df$Index <- seq(nrow(df))
+ggplot(data=df, aes(x=Index, y=dna_conc, color=type)) + geom_point()
+ggsave("plots/sequencing_depth.pdf")
+
+# Set any sample with DNA below detection limit (or neg PCR controls) to half the lowest measured value
+sample_data(phy)$dna_conc[sample_data(phy)$dna_conc == 0] <- min(sample_data(phy)$dna_conc[sample_data(phy)$dna_conc != 0])/2
+
+# Identify contaminants
+contamdf <- isContaminant(phy, method="frequency", conc="dna_conc")
+table(contamdf$contaminant)
+
+############################################################################
+
+# ### If using prevalence based method
+# 
+# # Compare sequencing depth to sample type 
+# df <- data.frame(sample_data(phy))
+# df <- df[order(df$reads),]
+# df$Index <- seq(nrow(df))
+# ggplot(data=df, aes(x=Index, y=reads, color=type)) + geom_point()
+# suppressMessages(ggsave("plots/sequencing_depth.pdf"))
+# 
+# # use prevalence method to decontam
+# contamdf <- isContaminant(phy, method="prevalence", neg="is.neg")
+# table(contamdf$contaminant)
+
+############################################################################
+
+# plot presence Abundance of contaminants
+ps.prc <- transform_sample_counts(phy, function(x) 100*x/sum(x))
+prc.melt <- psmelt(ps.prc)
+
+prc.melt$contaminant <- prc.melt$OTU %in% row.names(contamdf)[contamdf$contaminant]
+contam.prc <- aggregate(Abundance~Sample+type+contaminant, data = prc.melt, FUN = sum)
+
+ggplot(contam.prc[contam.prc$contaminant,], aes(x = type, y = Abundance)) + geom_boxplot()
+suppressMessages(ggsave("plots/contaminant_fraction_single.pdf"))
+
+aggregate(Abundance~type+contaminant, data = contam.prc, FUN = mean)
+
+# Create and store table of taxa and their abundance
+tax.df <- aggregate(Abundance ~ OTU+Phylum+Class+Order+Family+Genus+Species+type+contaminant, data = prc.melt, FUN = mean)
+tmp <- reshape2::dcast(tax.df,formula = Phylum+Class+Order+Family+Genus+Species+OTU+contaminant~type, value.var = "Abundance")
+
+write.table(tmp, file = "tables/contaminant_taxa.tsv", row.names = F,quote = F, sep = "\t",col.names = T)
+
+# Evaluate what you can agree to loose, I will use the default
+phy <- prune_taxa(row.names(contamdf)[!contamdf$contaminant], phy)
+
+# Filter ASVs with less than 5 reads
+phy <- prune_taxa(taxa_sums(phy) >= 5,phy)
+
+# Plot depth v type again
+df <- data.frame(sample_data(phy))
+df$depth <- sample_sums(phy)
+df <- df[order(df$depth),]
+df$Index <- seq(nrow(df))
+ggplot(data=df, aes(x=Index, y=depth, color=type)) + geom_point()
+
+# save the cleaned phyloseq object
+save(phy, file="R_objects/Decontam.Rdata")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
+invisible(gc()) #free up memory and report the memory usage.
+
+```
+
+*Cleaned phyloseq object saved in: "**R_objects/Decontam.Rdata**"*
+
+### MULTIPLE SETTINGS
+
+How the contaminants from each batch is combined is defined using the variable "batch.combine": - "minimum" = The minimum batch probabilities is used to identify contaminants - "product" = The product of the batch probabilities is used to identify contaminants - "fisher" = The batch probabilities are combined with Fishers method and used to identify contaminants Decontam can identify contaminants based on the initial DNA concentration (frequency) and/or based on prevalence in samples and controls. As for batches, the two methods can be used separately or combined. The variable "method" defines how decontam will run.
+
+#### CLASSIFY
+
+First we classify contaminants using all possible combinations of the settings.
+
+If there is only one batch or just one method used, **remember** to delete the unused lines.
+
+```{r decontam-multiple, eval = TRUE}
 
 params <- readRDS("R_objects/import_params.RDS")
 # load data 
@@ -378,7 +498,7 @@ suppressMessages(ggsave("plots/sequencing_depth.pdf"))
 contam.df <- data.frame(row.names = taxa_names(phy))
 
 # Set any sample with DNA below detection limit (or neg PCR controls) to half the lowest measured value
-sample_data(phy)$quant_reading <- ifelse(sample_data(phy)$dnaC == 0, min(sample_data(phy)$dnaC[sample_data(phy)$dnaC != 0])/2, sample_data(phy)$dnaC)
+sample_data(phy)$quant_reading <- ifelse(sample_data(phy)$dna_conc == 0, min(sample_data(phy)$dna_conc[sample_data(phy)$dna_conc != 0])/2, sample_data(phy)$dna_conc)
 
 # Both methods, no batches
 contam.df$Prev.none <- isContaminant(phy, method="prevalence", neg="is.neg", detailed = FALSE)
@@ -387,22 +507,22 @@ contam.df$combined.none <- isContaminant(phy, method="combined", neg="is.neg", c
 contam.df$minimum.none <- isContaminant(phy, method="minimum", neg="is.neg", conc="quant_reading", detailed = FALSE)
 
 # Both methods, Batch minimum
-contam.df$Prev.minimum <- isContaminant(phy, method="prevalence", neg="is.neg", detailed = FALSE, batch = "run", batch.combine = "minimum")
-contam.df$Freq.minimum <- isContaminant(phy, method="frequency", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "minimum")
-contam.df$combined.minimum <- isContaminant(phy, method="combined", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "minimum")
-contam.df$minimum.minimum <- isContaminant(phy, method="minimum", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "minimum")
+contam.df$Prev.minimum <- isContaminant(phy, method="prevalence", neg="is.neg", detailed = FALSE, batch = "Run", batch.combine = "minimum")
+contam.df$Freq.minimum <- isContaminant(phy, method="frequency", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "minimum")
+contam.df$combined.minimum <- isContaminant(phy, method="combined", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "minimum")
+contam.df$minimum.minimum <- isContaminant(phy, method="minimum", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "minimum")
 
 # Both methods, Batch product
-contam.df$Prev.product <- isContaminant(phy, method="prevalence", neg="is.neg", detailed = FALSE, batch = "run", batch.combine = "product")
-contam.df$Freq.product <- isContaminant(phy, method="frequency", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "product")
-contam.df$combined.product <- isContaminant(phy, method="combined", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "product")
-contam.df$minimum.product <- isContaminant(phy, method="minimum", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "product")
+contam.df$Prev.product <- isContaminant(phy, method="prevalence", neg="is.neg", detailed = FALSE, batch = "Run", batch.combine = "product")
+contam.df$Freq.product <- isContaminant(phy, method="frequency", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "product")
+contam.df$combined.product <- isContaminant(phy, method="combined", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "product")
+contam.df$minimum.product <- isContaminant(phy, method="minimum", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "product")
 
 # Both methods, Batch minimum
-contam.df$Prev.fisher <- isContaminant(phy, method="prevalence", neg="is.neg", detailed = FALSE, batch = "run", batch.combine = "fisher")
-contam.df$Freq.fisher <- isContaminant(phy, method="frequency", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "fisher")
-contam.df$combined.fisher <- isContaminant(phy, method="combined", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "fisher")
-contam.df$minimum.fisher <- isContaminant(phy, method="minimum", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "run", batch.combine = "fisher")
+contam.df$Prev.fisher <- isContaminant(phy, method="prevalence", neg="is.neg", detailed = FALSE, batch = "Run", batch.combine = "fisher")
+contam.df$Freq.fisher <- isContaminant(phy, method="frequency", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "fisher")
+contam.df$combined.fisher <- isContaminant(phy, method="combined", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "fisher")
+contam.df$minimum.fisher <- isContaminant(phy, method="minimum", neg="is.neg", conc="quant_reading", detailed = FALSE, batch = "Run", batch.combine = "fisher")
 
 # decontam summary
 contam.df$ASV <- row.names(contam.df)
@@ -416,26 +536,36 @@ prc.m <- full_join(prc.melt, contam.long, by = c("OTU" = "ASV"))
 # Aggregate and plot
 prc.agg <- prc.m %>% group_by(Sample, type, Method, Contaminant) %>% summarise(Abundance = sum(Abundance))
 decontam.plot <- ggplot(prc.agg[prc.agg$Contaminant,], aes(x = type, y = Abundance,color = Method)) +
-  geom_boxplot()  +
-  scale_color_manual(values=unname(pals::polychrome(n=length(unique(prc.agg$Method)))))
+  geom_boxplot()  + ggsci::scale_color_d3(palette = "category20")
 suppressMessages(ggsave(decontam.plot,file = "plots/contaminant_fraction_multiple.png",device = "png"))
 
 # save data to avoid rerunning for each knitting
 save(contam.df, contam.long, file = "R_objects/Decontam_tables.RData")
 ```
 
-The mean abundance classified as contaminant for each sample type and Decontam setting: 
-![Abundance classified as contaminant](plots/contaminant_fraction_multiple.png){width="100%"}
+*complete decontam classifications is saved in: "**R_objects/Decontam_tables.RData**"*
 
-```{r Decontam_filter, eval=TRUE,echo=TRUE}
+#### COMPARE
 
+The mean abundance classified as contaminant for each sample type and Decontam setting: ![Abundance classified as contaminant](plots/contaminant_fraction_multiple.png){width="100%"}
+
+The number of ASVs removed for each method is:
+
+```{r Decontam-count, eval=TRUE,echo=TRUE}
 load("R_objects/Decontam_tables.RData")
 
 # table with number of ASVs classified as contaminants
 with(contam.long, table(Method,Contaminant))
+```
+
+#### FILTER
+
+This section contains the actual decontamination. This should be performed as harshly as makes sense for each specific project, but I suggest basing this on the comparisons above, considering that contaminants in the mock sample is unlikely, while as much as the negative control should be removed.
+
+```{r Decontam-filter, eval=TRUE,echo=TRUE}
 
 # Evaluate what you can agree to loose and then use that column. I will use the minimum.minimum
-phy <- prune_taxa(contam.df$ASV[contam.df$minimum.minimum == FALSE], phy)
+phy <- prune_taxa(contam.df$ASV[contam.df$Freq.minimum == FALSE], phy)
 phy.harsh <- prune_taxa(contam.df$ASV[contam.df$Freq.product == FALSE], phy)
 # Filter ASVs with less than 5 reads
 phy <- prune_taxa(taxa_sums(phy) >= 5,phy)
@@ -480,7 +610,7 @@ invisible(gc())
 
 ```
 
-Cleaned phyloseq object saved in: "R_objects/Decontam.Rdata"
+*Cleaned phyloseq object saved in: "**R_objects/Decontam.Rdata**"*
 
 ## TEST MOCK
 
@@ -491,6 +621,7 @@ params <- readRDS("R_objects/import_params.RDS")
 
 # load data
 load("R_objects/Decontam.Rdata")
+
 # Subset mocks
 mocks <- subset_samples(phy, type == "Mock")
 mocks <- prune_taxa(taxa_sums(mocks) >= 5, mocks)
@@ -501,24 +632,27 @@ table(sample_sums(mocks))
 # All fine, so transform to percentages
 mocks.prc <- transform_sample_counts(mocks,fun = function(x) x*100/sum(x))
 
-# Define original mock
+# Import original mock community data
 mock.org <- readRDS("ZymoMock.RDS")
-
-# Define anything not matching orginal mock families as NA
-mock <- suppressWarnings(psmelt(mocks.prc))
-mock <- mock[mock$Abundance > 0,]
-# mock$Family_clean <- ifelse(mock$Family %in% mock.org$Family_clean, mock$Family, NA)
+data("ZymoMock")
+mock.org.clean <- aggregate(Abundance ~ Sample + Family, data = mock.org, FUN = sum)
 
 # melt mocks
-mock.org.clean <- mock.org[,c("Sample","Abundance","Family")]
+mock <- suppressWarnings(psmelt(mocks.prc))
+mock <- mock[mock$Abundance > 0,]
 mock.clean <- mock[,c("Sample","Abundance","Family")]
+
+# Remove families not in mock
 mock.clean$Family <- ifelse(mock.clean$Family %in% mock.org.clean$Family, mock.clean$Family, NA)
+
+# Bind the data
 mock.clean <- rbind(mock.clean,mock.org.clean)
 
 mock.ag <- mock.clean %>% group_by(Sample, Family) %>% summarise(Abundance = sum(Abundance))
 
 # Create plots
 mock.plot <- ggbarplot(mock.ag, x = "Sample", y = "Abundance", fill = "Family", palette = "npg",rotate=TRUE, ylab = FALSE)
+mock.plot
 
 suppressMessages(ggsave("plots/test_mock_comparison.png",mock.plot,device = "png"))
 
@@ -527,18 +661,17 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
-Comparison of the zymo mock community and the sequenced mock communities: 
-![Mock community comparison](plots/test_mock_comparison.png){width="100%"}
+Comparison of the zymo mock community and the sequenced mock communities: ![Mock community comparison](plots/test_mock_comparison.png){width="100%"}
 
-## RAREFACTION CURVES
+# RAREFACTION CURVES
 
 It is important to ensure that the samples have been sequenced to a sufficient depth and remove samples with to few sequencing reads. What number of sequences to set as cutoff should be balanced between the number of samples included, or excluded, and the alpha diversity level at that sequencing depth. To determine this we will calculate and evaluate rarefaction curves
 
-### CALCULATE DATA FOR RAREFACTION CURVES
+## CALCULATE DATA FOR RAREFACTION CURVES
 
-As this is used to assess the sequencing depth to use for the actual rarefaction fewer rarefactions is acceptable. Default maxdepth is set to the highest sequencing depth, but a lower value can be set. Here I will use the quantile function to look at the distribution of sequencing depths and then set it at the 90th quantile
+As this is used to assess the sequencing depth to use for the actual rarefaction fewer rarefactions is acceptable. Default maxdepth is set to the the 90th quantile of sample sequencing depths, but a lower value can be set.
 
-```{r rare_curve_calc, eval = TRUE}
+```{r rare-curve-calc, eval = FALSE}
 # load
 load("R_objects/Decontam.Rdata")
 load("scripts/adiv.Rdata")
@@ -546,11 +679,8 @@ load("scripts/adiv.Rdata")
 # Set alpha diversity indexes to use
 R.methods <- c("Observed", "Shannon")
 
-# Set max depth to the 90th quantile
-mdepth <- round(unname(quantile(sample_sums(phy),0.9)))
-
 # calculate rarefaction data
-Rdat <- Rcurve_data(phy, methods = R.methods, maxdepth = mdepth)
+Rdat <- Rcurve_data(phy, methods = R.methods)
 
 # melt data table
 Rdat.m <- pivot_longer(data = Rdat, cols = R.methods, names_to = "Index", values_to = "Alpha_diversity")
@@ -559,11 +689,8 @@ Rdat.m$Alpha_diversity[Rdat.m$Alpha_diversity == "NaN"] <- 1
 # save Rdat
 save(Rdat.m, file = "R_objects/Rare_dat.RData")
 
-# Set max depth to the 90th quantile
-mdepth <- round(unname(quantile(sample_sums(phy.harsh),0.9)))
-
 # calculate rarefaction data
-Rdat <- Rcurve_data(phy.harsh, methods = R.methods, maxdepth = mdepth)
+Rdat <- Rcurve_data(phy.harsh, methods = R.methods)
 
 # melt data table
 Rdat.m <- pivot_longer(data = Rdat, cols = R.methods, names_to = "Index", values_to = "Alpha_diversity")
@@ -571,6 +698,7 @@ Rdat.m$Alpha_diversity[Rdat.m$Alpha_diversity == "NaN"] <- 1
 
 # save Rdat
 save(Rdat.m, file = "R_objects/Rare_dat_harsh.RData")
+
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
 invisible(gc()) #free up memory and report the memory usage.
@@ -581,11 +709,11 @@ invisible(gc()) #free up memory and report the memory usage.
 
 #### GENTLE DECONTAM
 
-The rarefaction curves can be plottet for each sample by some other variable. Remember that the mock samples are expected to be very different. Also when grouping by other than sample there might be large changes when passing the actual sequencing depth of individual samples.
+The rarefaction curves can be plotted for each sample by some other variable. Remember that the mock samples are expected to be very different. Also when grouping by other than sample there might be large changes when passing the actual sequencing depth of individual samples.
 
-```{r rare_curve_gentle, eval = TRUE, echo = TRUE}
-
+```{r rare-curve-gentle, eval = TRUE, echo = TRUE}
 params <- readRDS(file = "R_objects/import_params.RDS")
+
 # Load data
 load("R_objects/Rare_dat.RData")
 
@@ -593,7 +721,7 @@ load("R_objects/Rare_dat.RData")
 plot.ind <- ggplot(Rdat.m, aes_string(x = "depth", y = "Alpha_diversity", color = params$batch)) + 
   geom_smooth(aes(group = Sample), se = FALSE) + 
   facet_wrap("Index", scales = "free",nrow = 1) + 
-  geom_vline(color = "red",xintercept = 13000) + 
+  geom_vline(color = "red",xintercept = 11000) + 
   theme_pubclean() + scale_color_brewer(palette = "Paired")
 suppressMessages(ggsave(filename = "plots/Rcurve_individual.png",plot = plot.ind, device = "png"))
 
@@ -603,7 +731,7 @@ Rdat.m <- Rdat.m %>% unite("Batch_type", c(params$batch, "type"), na.rm = TRUE, 
 plot.group <- ggplot(Rdat.m, aes(x = depth, y = Alpha_diversity, color = Batch_type)) + 
   geom_smooth(aes(group = Batch_type), method = "loess", formula = y ~ x, se = FALSE) + 
   facet_wrap("Index", scales = "free",nrow = 1) + 
-  geom_vline(color = "red",xintercept = 13000) + 
+  geom_vline(color = "red",xintercept = 11000) + 
   theme_pubclean() + scale_color_brewer(palette = "Paired")
 suppressMessages(ggsave("plots/Rcurve_grouped.png", plot = plot.group, device = "png"))
 
@@ -613,18 +741,17 @@ invisible(gc()) #free up memory and report the memory usage.
 
 ```
 
-Rarefaction curve for individual samples: 
-![Rarefaction_curves_individual](plots/Rcurve_individual.png){width="100%"} 
-Rarefaction curve grouped by sample type and batch: 
-![Rarefaction_curves_grouped](plots/Rcurve_grouped.png){width="100%"}
+Rarefaction curve for individual samples: ![Rarefaction_curves_individual](plots/Rcurve_individual.png){width="100%"} Rarefaction curve grouped by sample type and batch: ![Rarefaction_curves_grouped](plots/Rcurve_grouped.png){width="100%"}
 
 #### HARSH DECONTAM
 
 The rarefaction curves can be plottet for each sample by some other variable. Remember that the mock samples are expected to be very different. Also when grouping by other than sample there might be large changes when passing the actual sequencing depth of individual samples.
 
-```{r rare_curve_harsh, eval = TRUE, echo = TRUE}
+**REMEMBER** to update the position of the cutoff indicator (xintercept in geom_vline()).
 
+```{r rare-curve-harsh, eval = TRUE, echo = TRUE}
 params <- readRDS(file = "R_objects/import_params.RDS")
+
 # Load data
 load("R_objects/Rare_dat_harsh.RData")
 
@@ -632,7 +759,7 @@ load("R_objects/Rare_dat_harsh.RData")
 plot.ind <- ggplot(Rdat.m, aes_string(x = "depth", y = "Alpha_diversity", color = params$batch)) + 
   geom_smooth(aes(group = Sample), se = FALSE) + 
   facet_wrap("Index", scales = "free",nrow = 1) + 
-  geom_vline(color = "red",xintercept = 10000) + 
+  geom_vline(color = "red",xintercept = 8500) + 
   theme_pubclean() + scale_color_brewer(palette = "Paired")
 suppressMessages(ggsave(filename = "plots/Rcurve_individual_harsh.png",plot = plot.ind, device = "png"))
 
@@ -642,7 +769,7 @@ Rdat.m <- Rdat.m %>% unite("Batch_type", c(params$batch, "type"), na.rm = TRUE, 
 plot.group <- ggplot(Rdat.m, aes(x = depth, y = Alpha_diversity, color = Batch_type)) + 
   geom_smooth(aes(group = Batch_type), method = "loess", formula = y ~ x, se = FALSE) + 
   facet_wrap("Index", scales = "free",nrow = 1) + 
-  geom_vline(color = "red",xintercept = 10000) + 
+  geom_vline(color = "red",xintercept = 8500) + 
   theme_pubclean() + scale_color_brewer(palette = "Paired")
 suppressMessages(ggsave("plots/Rcurve_grouped_harsh.png", plot = plot.group, device = "png"))
 
@@ -652,21 +779,20 @@ invisible(gc()) #free up memory and report the memory usage.
 
 ```
 
-Rarefaction curve for individual samples:
-![Rarefaction_curves_individual](plots/Rcurve_individual_harsh.png){width="100%"} 
-Rarefaction curve grouped by sample type and batch:
-![Rarefaction_curves_grouped](plots/Rcurve_grouped_harsh.png){width="100%"}
+Rarefaction curve for individual samples: ![Rarefaction_curves_individual](plots/Rcurve_individual_harsh.png){width="100%"} Rarefaction curve grouped by sample type and batch: ![Rarefaction_curves_grouped](plots/Rcurve_grouped_harsh.png){width="100%"}
 
-## CREATE CLEAN PHYLOSEQ OBJECTS
+## CLEAN PHYLOSEQ OBJECTS
 
 After using decontaminate and evaluating the mock communities we can now create a phyloseq object with just the project samples.
 
-```{r subset_samples, eval=TRUE, echo=TRUE}
+**REMEMBER** to update the minimum sample sums based on the rarefaction curves.
+
+```{r subset-samples, eval=TRUE, echo=TRUE}
 # load data
 load("R_objects/Decontam.Rdata")
 
 # remove low read samples and mock
-phy <- prune_samples(sample_sums(phy) > 13000, phy)
+phy <- prune_samples(sample_sums(phy) > 11000, phy)
 phy <- subset_samples(phy, type == "Sample")
 phy <- prune_taxa(taxa_sums(phy) > 0, phy)
 phy_tree(phy) <- midpoint(phy_tree(phy))
@@ -675,7 +801,7 @@ phy_tree(phy) <- midpoint(phy_tree(phy))
 save(phy, file="R_objects/Phyloseq.Rdata")
 
 # remove low read samples and mock from harshly decontaminated
-phy <- prune_samples(sample_sums(phy.harsh) > 10000, phy.harsh)
+phy <- prune_samples(sample_sums(phy.harsh) > 8500, phy.harsh)
 phy <- subset_samples(phy, type == "Sample")
 phy <- prune_taxa(taxa_sums(phy) > 0, phy)
 phy_tree(phy) <- midpoint(phy_tree(phy))
@@ -688,13 +814,59 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
-This completes data import, initial cleaning, and QC of the sequencing data. The data stored in "R_objects/Phyloseq.Rdata" can be used as backup later. The created phyloseq objects can now be used for further analysis in the scripts for:
+# CALCULATE ALPHA DIVERSITY
 
-    | Analysis                | Script               |
-    |-------------------------|----------------------|
-    | Alpha diversity         | 2_AlphaDiversity.Rmd |
-    | Beta diversity          | 3_BetaDiversity.Rmd  |
-    | Differential abundance  | 4_DA.Rmd             |
+There is randomness involved in performing rarefaction (random subsampling). To minimize any effect of this randomness it is recommended to use the mean of multiple rarefactions instead of just relying on just one random subsampling. Not rarefying a sample can create a bias, so to avoid this I will rarefy all samples to 90% of the lowest sample depth (default setting). As this will be done for just one sequencing depth and we need the results to be consistent default setting is to rarefy 100 times. The function will produce a data.frame with sample metadata and the mean and standard deviation for each sample using the methods set prior.
+
+```{r alpha-div-calc, eval=FALSE}
+params <- readRDS(file = "R_objects/import_params.RDS")
+load("scripts/adiv.Rdata")
+
+# Set indeces
+INDECES <- as.vector(str_split(params$indeces,pattern = "\\|",simplify = TRUE))
+
+## First phyloseq object
+# load data
+load("R_objects/Phyloseq.Rdata")
+
+# Calculate data
+adat <- calculate_alpha_diversity(phy, INDECES = INDECES)
+
+# Add data to phyloseq object
+sample_data(phy) <- adat
+
+# Save the phyloseq object
+save(phy, INDECES, file="R_objects/Phyloseq.Rdata")
+
+## Harsh phyloseq object
+# load data
+load("R_objects/Phyloseq_harsh.Rdata")
+
+# Calculate data
+adat <- Calculate_alpha_div(phy, methods = INDECES)
+
+# Add data to phyloseq object
+sample_data(phy) <- adat
+
+# Save the phyloseq object
+save(phy, INDECES, file="R_objects/Phyloseq_harsh.Rdata")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
+invisible(gc()) #free up memory and report the memory usage.
+
+```
+
+# FINAL COMMENT
+
+This completes data import, initial cleaning, QC of the sequencing data, and calculation of alpha diversity. The data stored in "R_objects/Phyloseq.Rdata" and "R_objects/Phyloseq_harsh.Rdata". The phyloseq objects can now be used for further analysis in the templates for:
+
+| Analysis               | Template                   | Note                                                               |
+|------------------|---------------------|---------------------------------|
+| Microbiome description | GMH_description            | Statistical test of sample_data variables, incl alpha diversity    |
+| Statistical testing    | GMH_test_variables         | Statistical test and visualization of alpha diversity and metadata |
+| Beta diversity         | GMH_beta_diveristy         | Statistical test and visualization of beta diversity               |
+| Differential abundance | GMH_differential_abundance | Test differential abundance of taxa against sample variables       |
 
 # SETTINGS {.tabset .tabset-fade .tabset-pills}
 
@@ -715,15 +887,10 @@ kbl(dat, row.names = F) %>% kable_classic(lightable_options = "striped")
 
 ```
 
-## PACKAGES
+## SESSION INFO
 
-The analysis was run in R version `r getRversion()` using the following packages:
+The analysis was run in the following environment:
 
 ```{r packages, eval=TRUE}
-pack <- data.frame(Package = (.packages()))
-
-for (i in seq(nrow(pack))) pack$Version[i] <- as.character(packageVersion(pack$Package[i]))
-
-kbl(pack[order(pack$Package),], row.names = F) %>% kable_classic(lightable_options = "striped")   
-     
+sessionInfo()
 ```

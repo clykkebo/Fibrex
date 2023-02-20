@@ -210,6 +210,7 @@ adat <- Calculate_alpha_div(phy, methods = INDECES)
 
 # Save the phyloseq object
 save(adat, INDECES, file="R_objects/AlphaDiversity.RData")
+write.csv(adat, "export/alpha-diversity.csv", row.names = FALSE)
 
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
