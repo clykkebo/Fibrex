@@ -24,22 +24,31 @@ params:
 
 # INFO
 
-This template contains the commands necessary to perform initial import and QC of the output from the DF_GMH_PIPELINE.
+This document contains the commands necessary to perform initial import and QC of the output from the DF_GMH_PIPELINE. Here it has been fitted for data from Fibrex (project B-02-22). The project data contains 16S V2 amplicon sequencing from feces samples from 6 different days and cecum and ileum samples from two dissections originating from 48 rats. There are feces samples from all rats from day 0 and 8, while remaining days only contain from 24, as half the rats were dissected on day 8. Cecum and ileum samples were accordingly collected in at two dissection on day 8 and 21. Sampling on day 20 was run as a test of effect of carmine treatment for transit time.
 
-This template should not be run as is, but update to fit the specific project.\
-Suggested workflow:
+Metadata added contains results from:
 
--   Update header above
+Carmine treatment (0 = no and 1 = yes) for different days.
 
--   Update and run commands sequentially
+Bodyweight per sampling day (day 0, 8, 12, 16, 20 and 21), and cecum and liver weight per dissection day (day 8 and 21).
 
--   When the whole template has been updated, knit it.
+PFOS quantification of:
+- systemic concentrations in blood serum from day 8, 16 and 21, liver and brain tissues (day 8 and 21).
+- wash-out concentrations in urine from day 8, 16 and 21, feces from day 8, 12, 16 and 21, and cecum (day 8 and 21).
+
+Short-chain fatty acids quantification of 10 compounds in cecum given in mM per dissection day (day 8 and 21).
+
+pH-values from upper and lower jejunum, ileum and cecum in separate columns: pH_je_up, pH_je_low, pH_il, pH_ce per day. Also one pH column "pH" with values fitting each sample type (feces are assigned cecum values).
+
+Transit time for each day (day 0 = measurement from day 0; day 8 = measurement from day 7; day 21 = measurement from day 20)
+
 
 ```{r setup, eval=TRUE, echo=TRUE, message=FALSE,warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE ,warning = FALSE, message = FALSE)
 
 # Load libraries
 library(tidyverse)
+library(GMHmicrobiome)
 library(phyloseq)
 library(decontam)
 library(pals)
@@ -52,214 +61,6 @@ library(kableExtra)
 saveRDS(params, file = "R_objects/import_params.RDS")
 ```
 
-## SCRIPTS {.tabset .tabset-fade .tabset-pills}
-
-### INFO
-
-This section contains the scripts for the custom functions used in this analysis
-
-### CLEAN TAXA
-
-This script will remove any ASV that has not been assigned a taxa at the taxa level set by the variable "tax_removed". Following that, the function will replace any remaining taxa based on the information available as follows: if order, family, genus and species is missing for a Bacilli ASV the function will replace the NA values with "Class_Bacilli". It is a requirement that the tax_table has exactly 7 columns, else the script will fail. If verbose the function will write how many reads the function removed, what percentage of the overall reads that was, and the average sample percentage removed
-
-```{r Clean_taxa_script, eval=TRUE, echo=TRUE}
-
-clean_taxa <- function(physeq, tax_remove = "Phylum", verbose = TRUE) {
-  tax <- data.frame(tax_table(physeq))
-  
-  # list ASVs that should be removed
-  remove <- is.na(tax[,tax_remove])
-  
-  # remove ASVs
-  phy.out <- prune_taxa(!remove, physeq)
-  
-  # Calculate and print statistics
-  if (verbose) {
-    # Calculate sample sums of original and cleaned
-    output <- data.frame(row.names = sample_names(physeq),
-                         org = sample_sums(physeq),
-                         cleaned = sample_sums(phy.out))
-    output$removed <- output$org - output$cleaned
-    output$prc_removed <- output$removed*100/output$org
-    
-    # Print output
-    cat("OVERVIEW OF ASVs REMOVED:\n", 
-        "Removed ASVs (%):\t", 
-        sum(remove), 
-        " (", 
-        round(sum(remove)*100/nrow(tax), digits = 3), 
-        ")\n",
-        "Removed reads (%):\t", 
-        sum(output$removed), 
-        " (",
-        round(sum(output$removed)*100/sum(output$org), digits = 3),
-        ")\n",
-        "Mean abundance removed:\t", 
-        round(mean(output$prc_removed), digits = 3),"\n",
-        "Max abundance removed:\t", 
-        round(max(output$prc_removed), digits = 3),"\n", sep = "")
-  }
-  
-  # Remove NA from tax table
-  tax <- data.frame(tax_table(phy.out))
-  
-  for (i in seq(nrow(tax))) { 
-    if (is.na(tax[i,1])) {tax[i,1:7] <- "Unknown" 
-    } else if (is.na(tax[i,2])) {tax[i,2:7] <- paste(colnames(tax)[1],tax[i,1], sep = "_") 
-    } else if (is.na(tax[i,3])) {tax[i,3:7] <- paste(colnames(tax)[2],tax[i,2], sep = "_") 
-    } else if (is.na(tax[i,4])) {tax[i,4:7] <- paste(colnames(tax)[3],tax[i,3], sep = "_") 
-    } else if (is.na(tax[i,5])) {tax[i,5:7] <- paste(colnames(tax)[4],tax[i,4], sep = "_") 
-    } else if (is.na(tax[i,6])) {tax[i,6:7] <- paste(colnames(tax)[5],tax[i,5], sep = "_") 
-    } else if (is.na(tax[i,7])) {tax[i,7] <- paste(colnames(tax)[6],tax[i,6], sep = "_") 
-    }
-  }
-  
-  # Insert modified tax_table in phyloseq object
-  tax_table(phy.out) <- as.matrix(tax) 
-  
-  # return the clean phyloseq object
-  return(phy.out)
-}
-
-# Save function
-save(clean_taxa, file = "scripts/clean_tax.Rdata")
-
-# clear the environment and release memory
-rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
-invisible(gc()) #free up memory and report the memory usage.
-
-```
-
-### ALPHA DIVERSITY
-
-Alpha diversity is sensitive to sequencing depth, especially richness based metrics will increase with sequencing depth. To avoid any such bias rarefaction should be performed. Rarefaction
-
-```{r Alpha_diversity_functions, eval=TRUE, echo=TRUE}
-
-# Rarefaction curves
-Rcurve_data <- function(physeq, ntables=10, step=250,maxdepth = max(sample_sums(physeq)), methods=c("Observed","Chao1","ACE","Shannon","Evenness"), seedstart=500, verbose=FALSE) {
-  require("vegan")
-  
-  # prep list of 
-  step.seq <- seq(from = 1, to = maxdepth, by = step)
-  
-  # Calculate alpha diversity
-  rare_tab <- lapply(step.seq,function(k) Calculate_alpha_div(physeq = physeq, ntables = ntables, depth = k, methods = methods, seedstart = seedstart, verbose = verbose))
-    
-  # Format table
-  rare_tab <- do.call(rbind, rare_tab)
-  
-  return(rare_tab)
-}
-
-# Calculate alpha diversity
-Calculate_alpha_div <- function(physeq, ntables=100, depth = round(min(sample_sums(physeq))*0.9), methods=c("Observed","Chao1","ACE","Shannon","Evenness"), seedstart=500, verbose=FALSE) {
-  require("vegan")
-  
-  # remove samples below depth
-  phy.use <- prune_samples(sample_sums(physeq) >= depth, physeq )
-  
-  # Orientate the OTU correctly
-  if (taxa_are_rows(phy.use)){otu.tab<-unclass(t(otu_table(phy.use)))} else otu.tab <- unclass(otu_table(phy.use))
-  
-  # Rarefaction function
-  rarefy <- function(x, depth) {
-    y <- sample(rep(1:length(x), x), depth)
-    y.tab <- table(y)
-    j <- numeric(length(x))
-    j[as.numeric(names(y.tab))] <- y.tab
-    j
-  }
-  
-  # Table to output alpha diversity table
-  Alpha_diversity = data.frame(row.names = row.names(otu.tab))
-  
-  for (i in seq(length(methods))){
-    Alpha_diversity[,methods[i]] <- numeric(length = nrow(otu.tab))
-    Alpha_diversity[,paste0(methods[i],"_sd")] <- numeric(length = nrow(otu.tab))
-  }
-  
-  # Run each sample separately
-  for (z in 1:nrow(otu.tab)) {
-    if (verbose==TRUE) {
-      print(paste("Rarefaction sample number", z, sep=" "))
-    }
-    numbers <- otu.tab[z,]
-    
-    # Rarefy the sample ntables times
-    set.seed(seedstart + z)
-    rare_tab <- lapply(1:ntables,function(k) rarefy(numbers,depth))
-    
-    # Format table
-    rare_tab <- do.call(rbind, rare_tab)
-    
-    # Calculate Observed richness, Chao1, and ACE.
-    adiv <- data.frame(t(estimateR(rare_tab)))
-    
-    if ("Observed" %in% methods){
-      # Save mean and sd of observed richness
-      Alpha_diversity$Observed[z] <- mean(adiv$S.obs)
-      Alpha_diversity$Observed_sd[z] <- sd(adiv$S.obs)
-    }
-    
-    if ("Chao1" %in% methods){
-      # Save mean and sd of observed richness
-      Alpha_diversity$Chao1[z] <- mean(adiv$S.chao1)
-      Alpha_diversity$Chao1_sd[z] <- sd(adiv$S.chao1)
-    }
-    
-    if ("ACE" %in% methods){
-      # Save mean and sd of observed richness
-      Alpha_diversity$ACE[z] <- mean(adiv$se.ACE)
-      Alpha_diversity$ACE_sd[z] <- sd(adiv$se.ACE)
-    }
-    
-    if ("Shannon" %in% methods){
-      # Calculate observed richness for each rep of sample z
-      adiv <- vegan::diversity(rare_tab, index = "shannon")
-      
-      # Save mean and sd of observed richness
-      Alpha_diversity$Shannon[z] <- mean(adiv)
-      Alpha_diversity$Shannon_sd[z] <- sd(adiv)
-    }
-    
-    if ("Simpson" %in% methods){
-      # Calculate observed richness for each rep of sample z
-      adiv <- diversity(rare_tab, index = "simpson")
-      # Save mean and sd of observed richness
-      Alpha_diversity$Simpson[z] <- mean(adiv)
-      Alpha_diversity$Simpson_sd[z] <- sd(adiv)
-    }
-    
-    if ("Evenness" %in% methods){
-      # Calculate observed richness for each rep of sample z
-      sha <- vegan::diversity(rare_tab, index = "shannon")
-      obs <- rowSums(rare_tab != 0)
-      adiv <- sha/log(obs)
-      # Save mean and sd of observed richness
-      Alpha_diversity$Evenness[z] <- mean(adiv)
-      Alpha_diversity$Evenness_sd[z] <- sd(adiv)
-    }
-    
-  }
-
-  # Add alpha diversity to sample data
-  output <- cbind(sample_data(phy.use),Alpha_diversity)
-  output$depth = depth
-  # Return physeq to the environment
-  return(output) 
-}
-
-# save functions
-save(Calculate_alpha_div, Rcurve_data, file = "scripts/adiv.Rdata")
-
-# clear the environment and release memory
-rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
-invisible(gc()) #free up memory and report the memory usage.
-
-```
-
-
 # IMPORT AND MERGE
 
 This section will import and merge phyloseq and metadata
@@ -268,7 +69,7 @@ This section will import and merge phyloseq and metadata
 
 First step is to load the output from the pipeline. This section generates a unique sample identifiers that will be used to merge with metadata in the following section. The two additional variables created ("is.neg" and "type") will be used for decontamination later.
 
-```{r Load-sequencing-data, eval = TRUE}
+```{r Load-sequencing-data, eval = FALSE}
 
 params <- readRDS("R_objects/import_params.RDS")
 # Load analysis data
@@ -297,7 +98,7 @@ Next step is to load the metadata for the project. This step will have to be edi
 
 The section also creates a variable that matches the unique sample names and highlights if there are any mismatches between the sequencing and meta data.
 
-```{r Load-metadata, eval = TRUE}
+```{r Load-metadata, eval = FALSE}
 # export sample data
 tmp <- data.frame(sample_data(phy))
 
@@ -327,7 +128,7 @@ if (length(shared_cols) != 0) message("The following columns are present in both
 
 This section will now add the metadata to the sequencing data and save the resulting phyloseq file.
 
-```{r merge-data, eval = TRUE}
+```{r merge-data, eval = FALSE}
 # If any other columns than ID is in both, consider if you want it removed
 meta <- meta %>% select(-one_of(shared_cols))
 
@@ -718,13 +519,14 @@ params <- readRDS(file = "R_objects/import_params.RDS")
 load("R_objects/Rare_dat.RData")
 
 # plot per sample
-plot.ind <- ggplot(Rdat.m, aes_string(x = "depth", y = "Alpha_diversity", color = params$batch)) + 
+plot.ind <- ggplot(Rdat.m, aes(x = depth, y = Alpha_diversity, color = Run)) + 
   geom_smooth(aes(group = Sample), se = FALSE) + 
   facet_wrap("Index", scales = "free",nrow = 1) + 
   geom_vline(color = "red",xintercept = 11000) + 
   theme_pubclean() + scale_color_brewer(palette = "Paired")
 suppressMessages(ggsave(filename = "plots/Rcurve_individual.png",plot = plot.ind, device = "png"))
 
+Rdat.m <- Rdat.m[Rdat.m$type == "Sample",]
 Rdat.m <- Rdat.m %>% unite("Batch_type", c(params$batch, "type"), na.rm = TRUE, remove = FALSE)
 
 # plot per run and sample type
@@ -756,13 +558,14 @@ params <- readRDS(file = "R_objects/import_params.RDS")
 load("R_objects/Rare_dat_harsh.RData")
 
 # plot per sample
-plot.ind <- ggplot(Rdat.m, aes_string(x = "depth", y = "Alpha_diversity", color = params$batch)) + 
+plot.ind <- ggplot(Rdat.m, aes(x = depth, y = Alpha_diversity, color = Run)) + 
   geom_smooth(aes(group = Sample), se = FALSE) + 
   facet_wrap("Index", scales = "free",nrow = 1) + 
   geom_vline(color = "red",xintercept = 8500) + 
   theme_pubclean() + scale_color_brewer(palette = "Paired")
 suppressMessages(ggsave(filename = "plots/Rcurve_individual_harsh.png",plot = plot.ind, device = "png"))
 
+Rdat.m <- Rdat.m[Rdat.m$type == "Sample",]
 Rdat.m <- Rdat.m %>% unite("Batch_type", c(params$batch, "type"), na.rm = TRUE, remove = FALSE)
 
 # plot per run and sample type
@@ -843,7 +646,7 @@ save(phy, INDECES, file="R_objects/Phyloseq.Rdata")
 load("R_objects/Phyloseq_harsh.Rdata")
 
 # Calculate data
-adat <- Calculate_alpha_div(phy, methods = INDECES)
+adat <- calculate_alpha_diversity(phy, INDECES = INDECES)
 
 # Add data to phyloseq object
 sample_data(phy) <- adat
