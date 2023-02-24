@@ -20,9 +20,9 @@ knit: (function(inputFile, encoding) {
 
 ## BACKGROUND
 
-This template is build to use the output from **GMH_import** as input. It will take you through a basic test of sample variables and alpha diversity for the project. Alpha diversity the difference wihtin each sample, this means that it is independent of the other samples in the project.
+This template is build to use the output from **GMH_import** as input. It will take you through a basic test of sample variables and alpha diversity for the project. Alpha diversity is the difference within each sample, this means that it is independent of the other samples in the project.
 
-> Faith phylogenetic diversity is the only exception. It is dependent on the phylogenetic tree of the project, but we will consider it indenpendent within the project.
+> Faith phylogenetic diversity is the only exception. It is dependent on the phylogenetic tree of the project, but we will consider it independent within the project.
 
 To perform the correct statistical analysis we will go through the following steps :
 
@@ -210,11 +210,41 @@ invisible(gc())
 
 ## PROJECT
 
-PLEASE GIVE A SHORT PROJECT SUMMARY HERE (sample origin, goal, etc.)
+The FIBREX project is a PFOS exposure experiment focusing on the difference in uptake and wash-out of PFOS between rats given feed with and without dietary fibers. Samples for this analysis are 16S rRNA V3 amplicons from extracted total DNA of feces and luminal samples from ileum and cecum. Fecal samples were collected before exposure start (day 0, n=48) and hereafter at day 8 (n=48), 12 (n=24), 16 (n=24), 20 (n=24) and 21 (n=24). Luminal contents were collected at dissections at day 8 (n=24) and 21 (n=24). DNA was sequenced on Illumina platform and raw data converted to ASVs using cutadapt (Martin 2011) and DADA2 (Callahan et al. 2016) and made into Phyloseq elements (McMurdie and Holmes 2013). Goal of the analysis is to investigate the impact of feed, PFOS exposure and time on the gut microbiota.
+
+Sample data added from metadata contains results from:
+
+Carmine treatment (0 = no and 1 = yes) for different days.
+
+Bodyweight per sampling day (day 0, 8, 12, 16, 20 and 21), and cecum and liver weight per dissection day (day 8 and 21).
+
+PFOS quantification of:
+
+\- systemic concentrations in blood serum from day 8, 16 and 21, liver and brain tissues (day 8 and 21).
+
+\- wash-out concentrations in urine from day 8, 16 and 21, feces from day 8, 12, 16 and 21, and cecum (day 8 and 21).
+
+Short-chain fatty acids quantification of 10 compounds in cecum given in mM per dissection day (day 8 and 21).
+
+pH-values from upper and lower jejunum, ileum and cecum in separate columns: pH_je_up, pH_je_low, pH_il, pH_ce per day. Also one pH column "pH" with values fitting each sample type (feces are assigned cecum values).
+
+Transit time for each day (day 0 = measurement from day 0; day 8 = measurement from day 7; day 21 = measurement from day 20)
 
 ## VARIABLES
 
-PLEASE EXPLAIN THE USED VARIABLES HERE (subject, group, and time)
+Group variable is set for "feed_treat" which is a combined variable in the format e.g. "A_CTRL" or "B_PFOS" grouping based on:
+- type of feed (A = no dietary fiber and B = dietary fiber)
+- type of treatment given by oral gavage daily for 7 days (CTRL = control with pure corn oil; PFOS = 1.5mg/mL PFOS in corn oil)
+
+Subject variable is set to "rat_name" in the format R01 - R48.
+
+Time variable is set to "day" which includes days of sampling (day 0 = feces before treatment; day 8 = feces directly after treatment from all rats and ileum+cecum from half the rats; day 12 and 16 = 21)
+
+As mentioned, samples originate from both feces, cecum and ileum. These are reflected in the variable "material" as "Feces", "Cecum" and "Ileum". 
+
+Unique sample names (Sample_ID) are a combined nomenclature of material, day and rat_name in that order, e.g. cecum from rat 14 on day 8 = C8R14, feces from rat 31 on day 12 = F12R31, ileum from rat 11 on day 21 = Il21R11. 
+
+Note: nomenclature in "Sample_ID" was wrongly assigned  ileum and cecum for rat_names R41-R44, as R41 and R42 were taken on day 21 and R43 and R44 were taken on day 8. This is corrected in the columns "day" and "materialdayrat". The latter can be used for corrected sample nomenclature if needed.
 
 # DATA
 
@@ -237,7 +267,7 @@ dat <- as_tibble(sample_data(phy))
 
 ##### SECOND PART
 # Load data from table using readr (File > Import Dataset > From Text (readr)...) and paste the code here
-dat <- read_delim("...", delim = "\t", escape_double = FALSE, trim_ws = TRUE)
+#dat <- read_delim("...", delim = "\t", escape_double = FALSE, trim_ws = TRUE)
 
 ```
 
@@ -282,7 +312,7 @@ This is the general principles to follow:
 ```{r clean, eval=TRUE}
 
 # confirm identical variables
-with(dat, table(Seq_run == run))
+with(dat, table(Seq_run == Run))
 
 # Confirm variables with same information
 with(dat, table(gr, treatment))

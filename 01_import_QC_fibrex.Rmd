@@ -623,7 +623,7 @@ There is randomness involved in performing rarefaction (random subsampling). To 
 
 ```{r alpha-div-calc, eval=FALSE}
 params <- readRDS(file = "R_objects/import_params.RDS")
-load("scripts/adiv.Rdata")
+#load("scripts/adiv.Rdata")
 
 # Set indeces
 INDECES <- as.vector(str_split(params$indeces,pattern = "\\|",simplify = TRUE))

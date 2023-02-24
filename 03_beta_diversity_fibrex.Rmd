@@ -15,10 +15,12 @@ knit: (function(inputFile, encoding) {
         output_file = paste0("Fibrex_", Sys.Date(), "_beta_diversity.html"))
         })
 params:
-    input: "R_objects/<PHYLOSEQ OBJECT>"
-    group_var: ""
-    subject_var: "<SUBJECT VARIABLE>"
-    time_var: "<TIME VARIABLE>"
+    input: "R_objects/Phyloseq.Rdata"
+    group_var: "feed_treat"
+    subject_var: "rat_name"
+    time_var: "day"
+    COL: !r c("A_CTRL" = "#a5cee3","A_PFOS" = "#1778b6","B_CTRL" = "#b4d88a","B_PFOS" = "#30a148") # based on feed_treat and colorscheme from scale_color_brewer(palette = "Paired")
+
 ---
 
 # INFO
@@ -55,11 +57,41 @@ invisible(gc())
 
 ## PROJECT
 
-PLEASE GIVE A SHORT PROJECT SUMMARY HERE (sample origin, goal, etc.)
+The FIBREX project is a PFOS exposure experiment focusing on the difference in uptake and wash-out of PFOS between rats given feed with and without dietary fibers. Samples for this analysis are 16S rRNA V3 amplicons from extracted total DNA of feces and luminal samples from ileum and cecum. Fecal samples were collected before exposure start (day 0, n=48) and hereafter at day 8 (n=48), 12 (n=24), 16 (n=24), 20 (n=24) and 21 (n=24). Luminal contents were collected at dissections at day 8 (n=24) and 21 (n=24). DNA was sequenced on Illumina platform and raw data converted to ASVs using cutadapt (Martin 2011) and DADA2 (Callahan et al. 2016) and made into Phyloseq elements (McMurdie and Holmes 2013). Goal of the analysis is to investigate the impact of feed, PFOS exposure and time on the gut microbiota.
+
+Sample data added from metadata contains results from:
+
+Carmine treatment (0 = no and 1 = yes) for different days.
+
+Bodyweight per sampling day (day 0, 8, 12, 16, 20 and 21), and cecum and liver weight per dissection day (day 8 and 21).
+
+PFOS quantification of:
+
+\- systemic concentrations in blood serum from day 8, 16 and 21, liver and brain tissues (day 8 and 21).
+
+\- wash-out concentrations in urine from day 8, 16 and 21, feces from day 8, 12, 16 and 21, and cecum (day 8 and 21).
+
+Short-chain fatty acids quantification of 10 compounds in cecum given in mM per dissection day (day 8 and 21).
+
+pH-values from upper and lower jejunum, ileum and cecum in separate columns: pH_je_up, pH_je_low, pH_il, pH_ce per day. Also one pH column "pH" with values fitting each sample type (feces are assigned cecum values).
+
+Transit time for each day (day 0 = measurement from day 0; day 8 = measurement from day 7; day 21 = measurement from day 20)
 
 ## VARIABLES
 
-PLEASE EXPLAIN THE USED VARIABLES HERE (subject, group, and time)
+Group variable is set for "feed_treat" which is a combined variable in the format e.g. "A_CTRL" or "B_PFOS" grouping based on:
+- type of feed (A = no dietary fiber and B = dietary fiber)
+- type of treatment given by oral gavage daily for 7 days (CTRL = control with pure corn oil; PFOS = 1.5mg/mL PFOS in corn oil)
+
+Subject variable is set to "rat_name" in the format R01 - R48.
+
+Time variable is set to "day" which includes days of sampling (day 0 = feces before treatment; day 8 = feces directly after treatment from all rats and ileum+cecum from half the rats; day 12 and 16 = 21)
+
+As mentioned, samples originate from both feces, cecum and ileum. These are reflected in the variable "material" as "Feces", "Cecum" and "Ileum". 
+
+Unique sample names (Sample_ID) are a combined nomenclature of material, day and rat_name in that order, e.g. cecum from rat 14 on day 8 = C8R14, feces from rat 31 on day 12 = F12R31, ileum from rat 11 on day 21 = Il21R11. 
+
+Note: nomenclature in "Sample_ID" was wrongly assigned  ileum and cecum for rat_names R41-R44, as R41 and R42 were taken on day 21 and R43 and R44 were taken on day 8. This is corrected in the columns "day" and "materialdayrat". The latter can be used for corrected sample nomenclature if needed.
 
 # CALCULATE DISTANCES
 
@@ -171,7 +203,7 @@ params <- readRDS("R_objects/params_betadiv.RDS")
 load("R_objects/Phyloseq_betadiv.Rdata")
 
 # transform counts
-phy.ra <- transform_sample_counts(phy, function(x) x/sum(x))
+phy.ra <- transform_sample_counts(phy.clean, function(x) x/sum(x))
 
 # Calculate Bray-Curtis dissimilarities
 bray.dist <- distance(phy.ra, method = "bray",)
@@ -245,6 +277,128 @@ invisible(gc())
 
 ```
 
+### SUBSETS
+```{r calc-unif, eval=FALSE, echo=TRUE}
+METRICES <- c("bray","unif","wuf","jac","ait")
+DAYS <- c("d0","d08","d12","d16","d20","d21")
+FEEDS <- c("A","B","ALL")
+MTRL <- "Feces"
+# load
+params <- readRDS("R_objects/params_betadiv.RDS")
+load("R_objects/Phyloseq_betadiv.Rdata")
+message("Running loop for calculation of beta diversity subsets for feces.")
+for (DAY in DAYS) {
+  print(paste0("Processing day ",DAY,"..."))
+  for (FEED in FEEDS) {
+    for (METRIC in METRICES) {
+      load("R_objects/Phyloseq_betadiv.Rdata")
+      if (FEED == "ALL") {
+        FILENAME <- paste0("R_objects/bdiv_sub_",MTRL,"_",DAY,"_",METRIC,".Rdata")
+      } else {
+          FILENAME <- paste0("R_objects/bdiv_sub_",MTRL,"_",DAY,"_",FEED,"_",METRIC,".Rdata")
+      }
+      if (METRIC == "unif") {
+        load("R_objects/bdiv_unif.RData")
+        tmp.dist <- as.matrix(unif.dist)
+        if (FEED == "ALL") {
+          phy.sub <- subset_samples(phy.rare, material == MTRL & day %in% DAY)
+        } else {
+          phy.sub <- subset_samples(phy.rare, material == MTRL & day %in% DAY & feed %in% FEED)
+        }
+        SUBS <- sample_names(phy.sub)
+        
+        tmp.sub.dist <- tmp.dist[SUBS, SUBS]
+        unif.sub.dist <- as.dist(tmp.sub.dist, diag = TRUE, upper = TRUE)
+        
+        unif.sub.pcoa <- ordinate(phy.sub, method = "PCoA",distance = unif.sub.dist)
+        unif.sub.nmds <- metaMDS(unif.sub.dist, k = 5, trymax = 1000)
+        
+        save(phy.sub, unif.sub.dist, unif.sub.nmds, unif.sub.pcoa, file = FILENAME)
+      } else if (METRIC == "wuf") {
+        load("R_objects/bdiv_wunif.RData")
+        tmp.dist <- as.matrix(wuf.dist)
+        
+        if (FEED == "ALL") {
+          phy.sub <- subset_samples(phy.clean, material == MTRL & day %in% DAY)
+        } else {
+          phy.sub <- subset_samples(phy.clean, material == MTRL & day %in% DAY & feed %in% FEED)
+        }
+        SUBS <- sample_names(phy.sub)
+        
+        tmp.sub.dist <- tmp.dist[SUBS, SUBS]
+        wuf.sub.dist <- as.dist(tmp.sub.dist, diag = TRUE, upper = TRUE)
+        
+        wuf.sub.pcoa <- ordinate(phy.sub, method = "PCoA",distance = wuf.sub.dist)
+        wuf.sub.nmds <- metaMDS(wuf.sub.dist, k = 5, trymax = 1000)
+        
+        save(phy.sub, wuf.sub.dist, wuf.sub.nmds, wuf.sub.pcoa, file = FILENAME)
+      } else if (METRIC == "bray") {
+        load("R_objects/bdiv_bray.RData")
+        tmp.dist <- as.matrix(bray.dist)
+        
+        if (FEED == "ALL") {
+          phy.sub <- subset_samples(phy.rare, material == MTRL & day %in% DAY)
+        } else {
+          phy.sub <- subset_samples(phy.rare, material == MTRL & day %in% DAY & feed %in% FEED)
+        }
+        SUBS <- sample_names(phy.sub)
+        
+        tmp.sub.dist <- tmp.dist[SUBS, SUBS]
+        bray.sub.dist <- as.dist(tmp.sub.dist, diag = TRUE, upper = TRUE)
+        
+        bray.sub.pcoa <- ordinate(phy.sub, method = "PCoA", distance = bray.sub.dist)
+        bray.sub.nmds <- metaMDS(bray.sub.dist, k = 5, trymax = 1000)
+        
+        save(phy.sub, bray.sub.dist, bray.sub.pcoa, bray.sub.nmds, file = FILENAME)
+      } else if (METRIC == "jac") {
+        load("R_objects/bdiv_jac.RData")
+        tmp.dist <- as.matrix(jac.dist)
+        
+        if (FEED == "ALL") {
+          phy.sub <- subset_samples(phy.rare, material == MTRL & day %in% DAY)
+        } else {
+          phy.sub <- subset_samples(phy.rare, material == MTRL & day %in% DAY & feed %in% FEED)
+        }
+        SUBS <- sample_names(phy.sub)
+        
+        tmp.sub.dist <- tmp.dist[SUBS, SUBS]
+        jac.sub.dist <- as.dist(tmp.sub.dist, diag = TRUE, upper = TRUE)
+        
+        jac.sub.pcoa <- ordinate(phy.sub, method = "PCoA", distance = jac.sub.dist)
+        jac.sub.nmds <- metaMDS(jac.sub.dist, k = 5, trymax = 1000)
+        
+        save(phy.sub, jac.sub.dist, jac.sub.pcoa, jac.sub.nmds, file = FILENAME)
+      } else if (METRIC == "ait") {
+        load("R_objects/bdiv_ait.RData")
+        tmp.dist <- as.matrix(ait.dist)
+        
+        if (FEED == "ALL") {
+          phy.sub <- subset_samples(phy.clean, material == MTRL & day %in% DAY)
+        } else {
+          phy.sub <- subset_samples(phy.clean, material == MTRL & day %in% DAY & feed %in% FEED)
+        }
+        SUBS <- sample_names(phy.sub)
+        
+        tmp.sub.dist <- tmp.dist[SUBS, SUBS]
+        ait.sub.dist <- as.dist(tmp.sub.dist, diag = TRUE, upper = TRUE)
+        
+        ait.sub.pcoa <- ordinate(phy.sub, method = "PCoA", distance = ait.sub.dist)
+        ait.sub.nmds <- metaMDS(ait.sub.dist, k = 5, trymax = 1000)
+        
+        save(phy.sub, ait.sub.dist, ait.sub.pcoa, ait.sub.nmds, file = FILENAME)
+      }
+    }
+  }
+}
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+
+
+
 # VISUALIZATION
 
 Beta diversity is generally visualized by a NMDS (non metric multidimensional scaling) or PCoA (Principal Coordinate Analysis) plots. Both methods creates a representation of the beta diversity on few axes (3D plots should only be used for interactive on screen representations).
@@ -252,7 +406,7 @@ Beta diversity is generally visualized by a NMDS (non metric multidimensional sc
 
 > REMEMBER that any interpretation of a plot **MUST** be supported by a statistical analysis
 
-## LOAD DATA
+## LOAD DATA FROM SUBSETS
 First step is to  load the data and define the which variable will be tested in the following blocks.
 
 ```{r load-betadiv-a, eval=TRUE, echo=TRUE}
@@ -260,50 +414,94 @@ First step is to  load the data and define the which variable will be tested in 
 params <- readRDS("R_objects/params_betadiv.RDS")
 
 # Choose metric
-METRIC <- "ait"
+METRIC <- "unif"
 
 # Choose variable 
-VAR <- "treatment"
+VAR <- "feed_treat"
+MTRL <- "Feces"
+DAY <- "d08"
+FEED <- "A"
 
 # Load data
-load(params$input)
-
-if (METRIC == "unif") {
-  load("R_objects/bdiv_unif.RData")
-  dist.used <- unif.dist
-  nmds.used <- unif.nmds
-  pcoa.used <- unif.pcoa
-  phy.used <- phy.rare
-  rm(unif.dist, unif.nmds, unif.pcoa, phy.rare)
-} else if (METRIC == "wunif") {
-  load("R_objects/bdiv_wunif.RData")
-  dist.used <- wuf.dist
-  nmds.used <- wuf.nmds
-  pcoa.used <- wuf.pcoa
-  phy.used <- phy.clean
-  rm(wuf.dist, wuf.nmds, wuf.pcoa,phy.clean)
-} else if (METRIC == "bray"){
-  load("R_objects/bdiv_bray.RData")
-  dist.used <- bray.dist
-  nmds.used <- bray.nmds
-  pcoa.used <- bray.pcoa
-  phy.used <- phy.ra
-  rm(bray.dist, bray.nmds, bray.pcoa, phy.ra)
-} else if (METRIC == "jac"){
-  load("R_objects/bdiv_jac.RData")
-  dist.used <- bray.dist
-  nmds.used <- bray.nmds
-  pcoa.used <- bray.pcoa
-  phy.used <- phy.rare
-  rm(jac.dist, jac.nmds, jac.pcoa, phy.rare)
-} else if (METRIC == "ait"){
-  load("R_objects/bdiv_ait.RData")
-  dist.used <- ait.dist
-  nmds.used <- ait.nmds
-  pcoa.used <- ait.pcoa
-  phy.used <- phy.clean
-  rm(ait.dist, ait.nmds, ait.pcoa, phy.clean)
+if (FEED == "All") {
+  BFILE <- paste0("R_objects/bdiv_sub_",MTRL,"_",DAY,"_",METRIC,".Rdata")
+} else {
+  BFILE <- paste0("R_objects/bdiv_sub_",MTRL,"_",DAY,"_",FEED,"_",METRIC,".Rdata")
 }
+if (METRIC == "unif") {
+  load(BFILE)
+  dist.used <- unif.sub.dist
+  nmds.used <- unif.sub.nmds
+  pcoa.used <- unif.sub.pcoa
+  phy.used <- phy.sub
+  rm(unif.sub.dist, unif.sub.nmds, unif.sub.pcoa, phy.sub)
+} else if (METRIC == "wuf") {
+  load(BFILE)
+  dist.used <- wuf.sub.dist
+  nmds.used <- wuf.sub.nmds
+  pcoa.used <- wuf.sub.pcoa
+  phy.used <- phy.sub
+  rm(wuf.sub.dist, wuf.sub.nmds, wuf.sub.pcoa,phy.sub)
+} else if (METRIC == "bray"){
+  load(BFILE)
+  dist.used <- bray.sub.dist
+  nmds.used <- bray.sub.nmds
+  pcoa.used <- bray.sub.pcoa
+  phy.used <- phy.sub
+  rm(bray.sub.dist, bray.sub.nmds, bray.sub.pcoa, phy.sub)
+} else if (METRIC == "jac"){
+  load(BFILE)
+  dist.used <- jac.sub.dist
+  nmds.used <- jac.sub.nmds
+  pcoa.used <- jac.sub.pcoa
+  phy.used <- phy.sub
+  rm(jac.sub.dist, jac.sub.nmds, jac.sub.pcoa, phy.sub)
+} else if (METRIC == "ait"){
+  load(BFILE)
+  dist.used <- ait.sub.dist
+  nmds.used <- ait.sub.nmds
+  pcoa.used <- ait.sub.pcoa
+  phy.used <- phy.sub
+  rm(ait.sub.dist, ait.sub.nmds, ait.sub.pcoa, phy.sub)
+}
+
+
+# if (METRIC == "unif") {
+#   load("R_objects/bdiv_unif.RData")
+#   dist.used <- unif.dist
+#   nmds.used <- unif.nmds
+#   pcoa.used <- unif.pcoa
+#   phy.used <- phy.rare
+#   rm(unif.dist, unif.nmds, unif.pcoa, phy.rare)
+# } else if (METRIC == "wunif") {
+#   load("R_objects/bdiv_wunif.RData")
+#   dist.used <- wuf.dist
+#   nmds.used <- wuf.nmds
+#   pcoa.used <- wuf.pcoa
+#   phy.used <- phy.clean
+#   rm(wuf.dist, wuf.nmds, wuf.pcoa,phy.clean)
+# } else if (METRIC == "bray"){
+#   load("R_objects/bdiv_bray.RData")
+#   dist.used <- bray.dist
+#   nmds.used <- bray.nmds
+#   pcoa.used <- bray.pcoa
+#   phy.used <- phy.ra
+#   rm(bray.dist, bray.nmds, bray.pcoa, phy.ra)
+# } else if (METRIC == "jac"){
+#   load("R_objects/bdiv_jac.RData")
+#   dist.used <- bray.dist
+#   nmds.used <- bray.nmds
+#   pcoa.used <- bray.pcoa
+#   phy.used <- phy.rare
+#   rm(jac.dist, jac.nmds, jac.pcoa, phy.rare)
+# } else if (METRIC == "ait"){
+#   load("R_objects/bdiv_ait.RData")
+#   dist.used <- ait.dist
+#   nmds.used <- ait.nmds
+#   pcoa.used <- ait.pcoa
+#   phy.used <- phy.clean
+#   rm(ait.dist, ait.nmds, ait.pcoa, phy.clean)
+#}
 
 # Extract metadata from phyloseq
 mdat <- data.frame(sample_data(phy.used))
@@ -335,7 +533,7 @@ p.eigen <- ggplot(eigen[1:10,], aes(x = as.factor(Axis), y = 100*Relative_eig)) 
   xlab("Axis") +
   theme_pubr(legend = "none") + ggsci::scale_fill_jco()
 p.eigen + ggtitle(paste("Variance per axis for", METRIC, sep = " "))
-suppressMessages(ggsave(plot = p.eigen, filename = paste0("plots/bdiv_PCoA_axis",METRIC,".png"), device = "png"))
+suppressMessages(ggsave(plot = p.eigen, filename = paste0("plots/bdiv/",MTRL,"_",DAY,"/bdiv_PCoA_axis",METRIC,".png"), device = "png"))
 
 ```
 
@@ -346,8 +544,8 @@ The first plot highlights the location of each group on the first 5 axis. Based 
 
 ```{r ordination-find-axis-a, eval=TRUE}
 # Create plots of eigenvalues for PCoA plots
-pcoa.tab <- plot_ordination(phy, pcoa.used,axes = 1:5,justDF = TRUE)
-nmds.tab <- plot_ordination(phy, nmds.used,axes = 1:5,justDF = TRUE)
+pcoa.tab <- plot_ordination(phy.used, pcoa.used,axes = 1:5,justDF = TRUE)
+nmds.tab <- plot_ordination(phy.used, nmds.used,axes = 1:5,justDF = TRUE)
 
 # Reformat tables to create one common table
 colnames(nmds.tab)[1:5] <- c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5")
@@ -366,7 +564,7 @@ ggplot(axis.tab, aes_string(x = "ordination", y = "position", fill = VAR)) +
   geom_boxplot() +
   facet_grid(Axis~.) +
   coord_flip() + 
-  theme_pubr(legend = "bottom") + ggsci::scale_fill_jco()
+  theme_pubr(legend = "bottom") + scale_fill_manual(values = params$COL)#ggsci::scale_fill_jco()
 ```
 
 based on the best separation on the axis in the plot above I have chosen to use Axis 1 and 2 for the ordination
@@ -377,7 +575,7 @@ plot.nmds <- ggplot(ord.tab[ord.tab$ordination == "nmds",], aes_string(x = "Axis
   geom_point() + 
   labs(color=VAR) +
   theme_pubr(legend = "bottom")+
-  stat_ellipse() + ggsci::scale_color_jco()
+  stat_ellipse() + scale_color_manual(values = params$COL)
 plot.nmds1 <- plot.nmds + theme_pubr(legend = "none")
 plot.nmds2 <- ggExtra::ggMarginal(p = plot.nmds1, type = 'boxplot', size = 10, groupFill = TRUE )
 
@@ -386,7 +584,7 @@ plot.pcoa <- ggplot(ord.tab[ord.tab$ordination == "pcoa",], aes_string(x = "Axis
   geom_point() + 
   theme_pubr(legend = "none") + 
   labs(color=VAR) +
-  stat_ellipse() + ggsci::scale_color_jco()
+  stat_ellipse() + scale_color_manual(values = params$COL)
 plot.pcoa2 <- ggExtra::ggMarginal(p = plot.pcoa, type = 'boxplot', size = 10, groupFill = TRUE)
 
 # Extract legend
@@ -404,7 +602,7 @@ p.done <- ggdraw() +
 p.done
 
 # Save plot
-plotfile <- file.path("plots",paste0("bdiv_ordination_",VAR,".png"))
+plotfile <- file.path("plots",paste0("bdiv/",MTRL,"_",DAY,"/bdiv_ordination_",VAR,".png"))
 ggsave(filename = plotfile, plot = p.done, width = 14, height = 7,units = "in",dpi = 300)
 
 ```
@@ -454,7 +652,11 @@ When plotting the TukeyHSD, the y-axis is terribly formatted, but ordered simila
 ```{r permanova-a, eval=TRUE}
 
 # Perform test
-adonis2(dist.used ~ van*pfos, data = mdat, strata = mdat$day, permutations = 999, na.action = na.omit)
+if (FEED == "All") {
+  adonis2(dist.used ~ treatment*feed, data = mdat, strata = mdat$day, permutations = 999, na.action = na.omit)
+} else {
+adonis2(dist.used ~ treatment, data = mdat, strata = mdat$day, permutations = 999, na.action = na.omit)
+}
 
 ```
 
@@ -469,8 +671,8 @@ First step is to perform the calculation
 ```{r envfit-calc-a, eval=TRUE}
 
 # Fit data
-fit.nmds <- envfit(nmds.used ~ treatment+bw+fecesG,mdat, na.rm=TRUE, perm = 999)
-fit.pcoa <- envfit(nmds.used ~ treatment+bw+fecesG,mdat, na.rm=TRUE, perm = 999)
+fit.nmds <- envfit(nmds.used ~ dna_conc+feed+cecum_weight,mdat, na.rm=TRUE, perm = 999)
+fit.pcoa <- envfit(nmds.used ~ dna_conc+feed+cecum_weight,mdat, na.rm=TRUE, perm = 999)
 
 ```
 
@@ -513,6 +715,275 @@ ord.tab.2 <- full_join(ord.tab,center.dat)
 ### PLOT
 
 With the variables fitted to the ordination, we can now create the plot
+
+```{r envfit-plot-a, eval=TRUE}
+
+# Create NMDS plot
+plot.nmds <- ggplot(ord.tab.2[ord.tab.2$ordination == "nmds",], aes_string(x = "Axis.1", y = "Axis.2", color = VAR)) +
+  geom_point() + 
+  labs(color=VAR) +
+  theme_pubr(legend = "bottom")+
+  geom_segment(aes(xend = center.x,yend = center.y)) +
+  geom_segment(data = arrow.nmds, 
+               aes(x = 0, y = 0, xend = xend, yend = yend, color = NULL), 
+               arrow = arrow(type = "closed", length = unit(0.1, "inches")),
+               show.legend = FALSE) + 
+  geom_text(data = arrow.nmds, 
+            aes(x = xend, y = yend, label = row.names(arrow.nmds), color = NULL), 
+            nudge_x = 2, nudge_y = 2,
+            show.legend = F) +
+  ggsci::scale_color_jco()
+plot.nmds1 <- plot.nmds + theme_pubr(legend = "none")
+plot.nmds2 <- ggExtra::ggMarginal(p = plot.nmds1, type = 'boxplot', size = 10, groupFill = TRUE )
+
+# Create PCoA plot
+plot.pcoa <- ggplot(ord.tab.2[ord.tab.2$ordination == "pcoa",], aes_string(x = "Axis.1", y = "Axis.2", color = VAR)) +
+  geom_point() + 
+  theme_pubr(legend = "none") + 
+  labs(color=VAR) +
+  geom_segment(aes(xend = center.x,yend = center.y)) +
+  geom_segment(aes(x = 0, y = 0, xend = xend, yend = yend, color = NULL), 
+               data = arrow.nmds, 
+               arrow = arrow(type = "closed", length = unit(0.1, "inches")),
+               show.legend = FALSE) + 
+  geom_text(data = arrow.nmds, 
+            aes(x = xend, y = yend, label = row.names(arrow.nmds), color = NULL), 
+            nudge_x = 2, nudge_y = 2,
+            show.legend = F) +
+  #stat_ellipse() + 
+  ggsci::scale_color_jco()
+plot.pcoa2 <- ggExtra::ggMarginal(p = plot.pcoa, type = 'boxplot', size = 10, groupFill = TRUE)
+
+# Draw plot
+p.done <- ggdraw() + 
+  draw_plot(plot.nmds2, 0, 0.1, 0.5, 0.9) + 
+  draw_plot(plot.pcoa2, 0.5, 0.1, 0.5, 0.9) +
+  draw_grob(plot.legend, 0, 0, 1, .1) +
+  draw_plot_label("NMDS") + 
+  draw_plot_label("PCoA", x = 0.5) + 
+  theme(plot.background = element_rect(fill="white", color = NA))
+p.done
+
+# Save plot
+plotfile <- file.path("plots",paste0("bdiv_ordination_annotated_",VAR,".png"))
+ggsave(filename = plotfile, plot = p.done, width = 14, height = 7,units = "in",dpi = 300)
+
+```
+
+# LOOP VISUALIZATION
+```{r loop-betadiv-a, eval=TRUE, echo=TRUE}
+
+params <- readRDS("R_objects/params_betadiv.RDS")
+
+# Choose metric
+METRIC <- "bray"
+
+# Choose variable 
+VAR <- "feed_treat"
+MTRL <- "Feces"
+DAY <- "d08"
+FEED <- "A"
+
+METRICES <- c("bray","unif","wuf","jac","ait")
+DAYS <- c("d0","d08","d12","d16","d20","d21")
+FEEDS <- c("A","B","ALL")
+MTRL <- "Feces"
+
+
+# Load data
+for (DAY in DAYS) {
+  print(paste0("Processing day ",DAY,"..."))
+  for (FEED in FEEDS) {
+    for (METRIC in METRICES) {
+if (FEED == "ALL") {
+  BFILE <- paste0("R_objects/bdiv_sub_",MTRL,"_",DAY,"_",METRIC,".Rdata")
+} else {
+  BFILE <- paste0("R_objects/bdiv_sub_",MTRL,"_",DAY,"_",FEED,"_",METRIC,".Rdata")
+}
+if (METRIC == "unif") {
+  load(BFILE)
+  dist.used <- unif.sub.dist
+  nmds.used <- unif.sub.nmds
+  pcoa.used <- unif.sub.pcoa
+  phy.used <- phy.sub
+  rm(unif.sub.dist, unif.sub.nmds, unif.sub.pcoa, phy.sub)
+} else if (METRIC == "wuf") {
+  load(BFILE)
+  dist.used <- wuf.sub.dist
+  nmds.used <- wuf.sub.nmds
+  pcoa.used <- wuf.sub.pcoa
+  phy.used <- phy.sub
+  rm(wuf.sub.dist, wuf.sub.nmds, wuf.sub.pcoa,phy.sub)
+} else if (METRIC == "bray"){
+  load(BFILE)
+  dist.used <- bray.sub.dist
+  nmds.used <- bray.sub.nmds
+  pcoa.used <- bray.sub.pcoa
+  phy.used <- phy.sub
+  rm(bray.sub.dist, bray.sub.nmds, bray.sub.pcoa, phy.sub)
+} else if (METRIC == "jac"){
+  load(BFILE)
+  dist.used <- jac.sub.dist
+  nmds.used <- jac.sub.nmds
+  pcoa.used <- jac.sub.pcoa
+  phy.used <- phy.sub
+  rm(jac.sub.dist, jac.sub.nmds, jac.sub.pcoa, phy.sub)
+} else if (METRIC == "ait"){
+  load(BFILE)
+  dist.used <- ait.sub.dist
+  nmds.used <- ait.sub.nmds
+  pcoa.used <- ait.sub.pcoa
+  phy.used <- phy.sub
+  rm(ait.sub.dist, ait.sub.nmds, ait.sub.pcoa, phy.sub)
+}
+print(paste0("- ",FEED," for ",METRIC,"..."))
+# Extract metadata from phyloseq
+mdat <- data.frame(sample_data(phy.used))
+
+# If a variable consist of numbers, but represent distinct groups remember to make it into a factor
+mdat[,VAR] <- as.factor(mdat[,VAR])
+
+# Extract eigen values
+eigen <- pcoa.used$values
+eigen$Axis <- as.numeric(row.names(eigen))
+
+# Create plots for both distance indeces
+p.eigen <- ggplot(eigen[1:10,], aes(x = as.factor(Axis), y = 100*Relative_eig)) + 
+  geom_col(aes(fill = as.factor(Axis))) +
+  geom_point(aes(x = Axis, y = 100*Cumul_eig)) +
+  geom_line(aes(x = Axis, y = 100*Cumul_eig)) +
+  ylab("Variance explained (%)") +
+  xlab("Axis") +
+  theme_pubr(legend = "none") + ggsci::scale_fill_jco()
+try(p.eigen + ggtitle(paste("Variance per axis for", METRIC, sep = " ")), silent = TRUE)
+try(suppressMessages(ggsave(plot = p.eigen, filename = paste0("plots/bdiv/",MTRL,"_",DAY,"/bdiv_PCoA_axis_",FEED,"_",METRIC,".png"), device = "png")), silent = TRUE)
+
+# Create plots of eigenvalues for PCoA plots
+pcoa.tab <- plot_ordination(phy.used, pcoa.used,axes = 1:5,justDF = TRUE)
+nmds.tab <- plot_ordination(phy.used, nmds.used,axes = 1:5,justDF = TRUE)
+
+# Reformat tables to create one common table
+colnames(nmds.tab)[1:5] <- c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5")
+
+nmds.tab$ordination <- "nmds"
+pcoa.tab$ordination <- "pcoa"
+
+ord.tab <- rbind(nmds.tab,pcoa.tab)
+ord.tab[,VAR] <- as.factor(ord.tab[,VAR])
+
+# Melt axis to be in one variable
+axis.tab <- pivot_longer(data = ord.tab, cols = c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5"), names_to = "Axis", values_to = "position")
+
+# Plot positions on axes
+ggplot(axis.tab, aes_string(x = "ordination", y = "position", fill = VAR)) +
+  geom_boxplot() +
+  facet_grid(Axis~.) +
+  coord_flip() + 
+  theme_pubr(legend = "bottom") + scale_fill_manual(values = params$COL)#ggsci::scale_fill_jco()
+
+# Create NMDS plot
+plot.nmds <- ggplot(ord.tab[ord.tab$ordination == "nmds",], aes_string(x = "Axis.1", y = "Axis.2", color = VAR, group = VAR)) +
+  geom_point() + 
+  labs(color=VAR) +
+  theme_pubr(legend = "bottom")+
+  stat_ellipse() + scale_color_manual(values = params$COL)
+plot.nmds1 <- plot.nmds + theme_pubr(legend = "none")
+plot.nmds2 <- ggExtra::ggMarginal(p = plot.nmds1, type = 'boxplot', size = 10, groupFill = TRUE )
+
+# Create PCoA plot
+plot.pcoa <- ggplot(ord.tab[ord.tab$ordination == "pcoa",], aes_string(x = "Axis.1", y = "Axis.2", color = VAR, group = VAR)) +
+  geom_point() + 
+  theme_pubr(legend = "none") + 
+  labs(color=VAR) +
+  stat_ellipse() + scale_color_manual(values = params$COL)
+plot.pcoa2 <- ggExtra::ggMarginal(p = plot.pcoa, type = 'boxplot', size = 10, groupFill = TRUE)
+
+# Extract legend
+plot.legend <- get_legend(plot.nmds)
+
+# Draw plot
+p.done <- ggdraw() + 
+  draw_plot(plot.nmds2, 0, 0.1, 0.5, 0.9) + 
+  draw_plot(plot.pcoa2, 0.5, 0.1, 0.5, 0.9) +
+  draw_grob(plot.legend, 0, 0, 1, .1) +
+  draw_plot_label("NMDS") + 
+  draw_plot_label("PCoA", x = 0.5) + 
+  theme(plot.background = element_rect(fill="white", color = NA))
+
+p.done
+
+# Save plot
+plotfile <- file.path("plots",paste0("bdiv/",MTRL,"_",DAY,"/bdiv_ordination_",VAR,"_",FEED,"_",METRIC,".png"))
+ggsave(filename = plotfile, plot = p.done, width = 14, height = 7,units = "in",dpi = 300, device = "png")
+plotfile <- file.path("plots",paste0("bdiv/",MTRL,"_",DAY,"/bdiv_ordination_",VAR,"_",FEED,"_",METRIC,".pdf"))
+ggsave(filename = plotfile, plot = p.done, width = 14, height = 7,units = "in",dpi = 300, device = "pdf")
+
+# Calculate betadispertion
+bdisp <- betadisper(dist.used, mdat[,VAR])
+
+# Run statical test
+anova(bdisp)
+
+# Run posthoc test if significant and more than two groups
+TukeyHSD(bdisp)
+plot(TukeyHSD(bdisp))
+
+# Plot dispertion
+boxplot(bdisp)
+
+# Perform test
+if (FEED == "All") {
+  PERM <- adonis2(dist.used ~ treatment*feed, data = mdat, strata = mdat$day, permutations = 999, na.action = na.omit)
+} else {
+  PERM <- adonis2(dist.used ~ treatment, data = mdat, strata = mdat$day, permutations = 999, na.action = na.omit)
+}
+write.table(PERM, file = paste0("plots/bdiv/",MTRL,"_",DAY,"/bdiv_PERM_",VAR,"_",FEED,"_",METRIC,".txt"))
+    }
+  }
+  print(paste0("Finished day ",DAY,"..."))
+}
+```
+
+```{r envfit-calc-a, eval=TRUE}
+
+# Fit data
+fit.nmds <- envfit(nmds.used ~ treatment+feed,mdat, na.rm=TRUE, perm = 999)
+fit.pcoa <- envfit(nmds.used ~ treatment+feed,mdat, na.rm=TRUE, perm = 999)
+
+```
+
+```{r envfit-format-a,eval=TRUE}
+# Extract nmds arrows
+arrow.nmds <- data.frame(fit.nmds$vectors$arrows)
+colnames(arrow.nmds) <- c("xend","yend")
+arrow.nmds$xend <- with(arrow.nmds, xend*sqrt(fit.nmds$vectors$r)*100)
+arrow.nmds$yend <- with(arrow.nmds, yend*sqrt(fit.nmds$vectors$r)*100)
+
+# Extract pcoa arrows
+arrow.pcoa <- data.frame(fit.pcoa$vectors$arrows)
+colnames(arrow.pcoa) <- c("xend","yend")
+arrow.pcoa$xend <- with(arrow.pcoa, xend*sqrt(fit.pcoa$vectors$r)*100)
+arrow.pcoa$yend <- with(arrow.pcoa, yend*sqrt(fit.pcoa$vectors$r)*100)
+
+# extract nmds centroids
+center.nmds <- as.data.frame(fit.nmds$factors$centroids) %>% 
+  rownames_to_column(var = "treatment") %>% 
+  mutate(treatment = str_remove(treatment, "treatment"), ordination = "nmds")
+colnames(center.nmds) <- c("treatment","center.x","center.y","ordination")
+
+# extract pcoa centroids
+center.pcoa <- as.data.frame(fit.pcoa$factors$centroids) %>%
+  rownames_to_column(var = "treatment") %>% 
+  mutate(treatment = str_remove(treatment, "treatment"), ordination = "pcoa")
+colnames(center.pcoa) <- c("treatment","center.x","center.y","ordination")
+
+# cobine 
+center.dat <- rbind(center.nmds,center.pcoa)
+
+# add data to ord
+ord.tab.2 <- full_join(ord.tab,center.dat)
+
+```
 
 ```{r envfit-plot-a, eval=TRUE}
 
