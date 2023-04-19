@@ -2129,7 +2129,7 @@ invisible(gc())
 
 Here we investigate the change in alpha-diversity over the four sampling days in feces.
 
-### Feces A CONTROL (INDIVIDUAL)
+### Feces loop for A+B and CTRL+PFOS (INDIVIDUAL)
 
 Here is code to test alpha diversity for a single categorical variable. To change the variable, just update the TEST.VAR
 
@@ -2312,7 +2312,7 @@ invisible(gc())
 
 
 
-## Diversity between materials on day 8 (material, treatment)
+## """Diversity between materials on day 8 (material, treatment)
 
 ### Control (INDIVIDUAL)
 
@@ -3017,7 +3017,7 @@ invisible(gc())
 
 Here we aim to look at diversity differences in each type of sample (material) on each day (0, 2, 4, 8).
 
-### Feces day 0 A (INDIVIDUAL)
+### Feces loop for day, feed against treatment (INDIVIDUAL)
 
 Here is code to test alpha diversity for a single categorical variable. To change the variable, just update the TEST.VAR
 
@@ -3029,8 +3029,6 @@ DAYS <- c("d0","d08","d12","d16","d20","d21")
 FEEDS <- c("A","B")
 TEST.VAR <- "treatment"
 SUBSET.VAR <- "Feces"
-DAY.VAR <- "d0"
-FEED.VAR <- "A"
 for (DAY.VAR in DAYS) {
   for (FEED.VAR in FEEDS) {
 # Load data

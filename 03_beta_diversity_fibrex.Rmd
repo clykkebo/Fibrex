@@ -105,10 +105,13 @@ Beta diversity are affected by all samples included, so if some samples are remo
 
 # Load data
 params <- readRDS("R_objects/params_betadiv.RDS")
+MTRLS <- c("Feces","Cecum","Ileum")
+
+for (MTRL in MTRLS) {
 load(params$input)
 
 # Create subset
-phy.clean <- subset_samples(phy, material == "Feces")
+phy.clean <- subset_samples(phy, material == MTRL)
 
 # Clean data
 phy.clean <- prune_samples(sample_names(phy.clean)[!is.na(sample_data(phy.clean)[,params$group_var])], phy.clean)
@@ -129,7 +132,8 @@ phy.rare <- prune_taxa(taxa_sums(phy.rare) > 0, phy.rare)
 phy_tree(phy.rare) <- phangorn::midpoint(phy_tree(phy.rare))
 
 # Save object
-save(phy.rare, phy.clean, file = "R_objects/Phyloseq_betadiv.Rdata")
+save(phy.rare, phy.clean, file = paste0("R_objects/Phyloseq_betadiv_",MTRL,".Rdata"))
+}
 
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
@@ -145,10 +149,11 @@ There are many different algorithms that can be used to calculate beta diversity
 The unique fraction metric, or UniFrac, measures the phylogenetic distance between sets of taxa in a phylogenetic tree as the fraction of the branch length of the tree that leads to descendants from either one environment or the other, but not both [(Lozupone & Knight, 2005)](https://doi.org/10.1128/AEM.71.12.8228-8235.2005). This metric is sensitive to sequencing depth, so it is required to use a rarefied phyloseq object The UniFrac algorithm requires a rooted tree, so if ASVs has been removed from the raw da the tree should be rerooted manually, else a random ASV will be chosen as root.
 
 ```{r calc-unif, eval=FALSE, echo=TRUE}
-
+MTRLS <- c("Feces","Cecum","Ileum")
 # load
 params <- readRDS("R_objects/params_betadiv.RDS")
-load("R_objects/Phyloseq_betadiv.Rdata")
+for (MTRL in MTRLS) {
+load(paste0("R_objects/Phyloseq_betadiv_",MTRL,".Rdata"))
 
 # Calculate UniFrac distances
 unif.dist <- UniFrac(phy.rare, weighted = FALSE, parallel = FALSE)
@@ -158,8 +163,8 @@ unif.pcoa <- ordinate(phy.rare, method = "PCoA",distance = unif.dist)
 unif.nmds <- metaMDS(unif.dist, k = 5, trymax = 1000)
 
 # Save distance objects
-save(unif.dist, unif.nmds, unif.pcoa, phy.rare, file = "R_objects/bdiv_unif.RData")
-
+save(unif.dist, unif.nmds, unif.pcoa, phy.rare, file = paste0("R_objects/bdiv_unif_",MTRL,".RData"))
+}
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE))
 invisible(gc())
@@ -171,10 +176,11 @@ invisible(gc())
 The unique fraction metric, or UniFrac, measures the phylogenetic distance between sets of taxa in a phylogenetic tree as the fraction of the branch length of the tree that leads to descendants from either one environment or the other, but not both [(Lozupone & Knight, 2005)](https://doi.org/10.1128/AEM.71.12.8228-8235.2005). Weighted UniFrac takes the abundance of each ASV into account instead of just presence/absence, which means that it will not be sensitive to sequencing depth. The UniFrac algorithm requires a rooted tree, so if ASVs has been removed from the raw da the tree should be rerooted manually, else a random ASV will be chosen as root.
 
 ```{r calc-wunif, eval=FALSE, echo=TRUE}
-
+MTRLS <- c("Feces","Cecum","Ileum")
 # load
 params <- readRDS("R_objects/params_betadiv.RDS")
-load("R_objects/Phyloseq_betadiv.Rdata")
+for (MTRL in MTRLS) {
+load(paste0("R_objects/Phyloseq_betadiv_",MTRL,".Rdata"))
 
 # Calculate UniFrac distances
 wuf.dist <- UniFrac(phy.clean, weighted = TRUE, parallel = FALSE)
@@ -184,8 +190,8 @@ wuf.pcoa <- ordinate(phy.clean, method = "PCoA",distance = wuf.dist)
 wuf.nmds <- metaMDS(wuf.dist, k = 5, trymax = 1000)
 
 # Save distance objects
-save(wuf.dist, wuf.nmds, wuf.pcoa, phy.clean, file = "R_objects/bdiv_wunif.RData")
-
+save(wuf.dist, wuf.nmds, wuf.pcoa, phy.clean, file = paste0("R_objects/bdiv_wuf_",MTRL,".RData"))
+}
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE))
 invisible(gc())
@@ -197,10 +203,11 @@ invisible(gc())
 Bray-Curtis dissimilarity index (as implemented by the vegan package) is the sum of abundance difference for each species/ASV, divided by theoretical maximum difference between the samples if no ASV overlapped. The formula used is: $$d_{jk} = \frac{\sum|n_{ij}-n_{ik}|}{\sum(n_{ij}+n_{ik})}$$ Bray-Curtis dissimilarity is not a true distance metric as it does not adhere to the [triangle inequality](https://en.wikipedia.org/wiki/Triangle_inequality), but is often used to compare microbiomes. Bray-Curtis dissimilarities are based on the assumption that measurements are taken from equal areas, so differences in total counts between samples will bias the metric. As differences in sequences depth is due to differences in the lab procedures and not biological differences, we should transform our counts to relative abundances before calculating Bray-Curtis dissimilarities. By transforming the data to abundances no data is lost, but rarefied data can also be used.
 
 ```{r calc-bray, eval=FALSE, echo=TRUE}
-
+MTRLS <- c("Feces","Cecum","Ileum")
 # load
 params <- readRDS("R_objects/params_betadiv.RDS")
-load("R_objects/Phyloseq_betadiv.Rdata")
+for (MTRL in MTRLS) {
+load(paste0("R_objects/Phyloseq_betadiv_",MTRL,".Rdata"))
 
 # transform counts
 phy.ra <- transform_sample_counts(phy.clean, function(x) x/sum(x))
@@ -213,8 +220,8 @@ bray.pcoa <- ordinate(phy.ra, method = "PCoA",distance = bray.dist)
 bray.nmds <- metaMDS(bray.dist, k = 5, trymax = 1000)
 
 # Save distance objects
-save(bray.dist, bray.nmds, bray.pcoa, phy.ra, file = "R_objects/bdiv_bray.RData")
-
+save(bray.dist, bray.nmds, bray.pcoa, phy.ra, file = paste0("R_objects/bdiv_bray_",MTRL,".RData"))
+}
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE))
 invisible(gc())
@@ -230,10 +237,11 @@ $$d(A,B) = 1 - J(A,B)$$
 > We will be calculating binary Jaccard dissimilarity
 
 ```{r calc-jac, eval=FALSE, echo=TRUE}
-
+MTRLS <- c("Feces","Cecum","Ileum")
 # load
 params <- readRDS("R_objects/params_betadiv.RDS")
-load("R_objects/Phyloseq_betadiv.Rdata")
+for (MTRL in MTRLS) {
+load(paste0("R_objects/Phyloseq_betadiv_",MTRL,".Rdata"))
 
 # Calculate Jaccard binary dissimilarities
 jac.dist <- distance(phy.rare, method = "jaccard", binary = TRUE)
@@ -243,8 +251,8 @@ jac.pcoa <- ordinate(phy.rare, method = "PCoA",distance = jac.dist)
 jac.nmds <- metaMDS(jac.dist, k = 5, trymax = 1000)
 
 # Save distance objects
-save(jac.dist, jac.nmds, jac.pcoa, phy.rare, file = "R_objects/bdiv_jac.RData")
-
+save(jac.dist, jac.nmds, jac.pcoa, phy.rare, file = paste0("R_objects/bdiv_jac_",MTRL,".RData"))
+}
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE))
 invisible(gc())
@@ -256,10 +264,11 @@ invisible(gc())
 Aitchison distance (1986) and robust Aitchison distance [(Martino et al. 2019)](https://journals.asm.org/doi/10.1128/mSystems.00016-19) are metrics that deal with compositional data. The Aitchison distance is a dissimilarity measure calculated as the Euclidean distance between observations (samples) after performing a centered log ratio (“clr”) transformation. Aitchison distance has been said to outperform Jensen-Shannon divergence and Bray-Curtis dissimilarity, due to a better stability to subsetting and aggregation, and it being a proper distance (Aitchison et al., 2000).
 
 ```{r calc-ait, eval=FALSE, echo=TRUE}
-
+MTRLS <- c("Feces","Cecum","Ileum")
 # load
 params <- readRDS("R_objects/params_betadiv.RDS")
-load("R_objects/Phyloseq_betadiv.Rdata")
+for (MTRL in MTRLS) {
+load(paste0("R_objects/Phyloseq_betadiv_",MTRL,".Rdata"))
 
 # Calculate Bray-Curtis dissimilarities
 ait.dist <- vegan::vegdist(otu_table(phy.clean), method = "robust.aitchison")
@@ -269,8 +278,8 @@ ait.pcoa <- ordinate(phy.clean, method = "PCoA",distance = ait.dist)
 ait.nmds <- metaMDS(ait.dist, k = 5, trymax = 1000)
 
 # Save distance objects
-save(ait.dist, ait.nmds, ait.pcoa, phy.clean, file = "R_objects/bdiv_ait.RData")
-
+save(ait.dist, ait.nmds, ait.pcoa, phy.clean, file = paste0("R_objects/bdiv_ait_",MTRL,".RData"))
+}
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE))
 invisible(gc())
@@ -282,23 +291,29 @@ invisible(gc())
 METRICES <- c("bray","unif","wuf","jac","ait")
 DAYS <- c("d0","d08","d12","d16","d20","d21")
 FEEDS <- c("A","B","ALL")
-MTRL <- "Feces"
+MTRLS <- c("Feces","Cecum","Ileum")
 # load
 params <- readRDS("R_objects/params_betadiv.RDS")
-load("R_objects/Phyloseq_betadiv.Rdata")
-message("Running loop for calculation of beta diversity subsets for feces.")
+#load("R_objects/Phyloseq_betadiv.Rdata")
+for (MTRL in MTRLS) {
+message(paste0("Running loop for calculation of beta diversity subsets for ",MTRL,"."))
+  if (MTRL == "Cecum" || MTRL == "Ileum") {
+    DAYS <- c("d08","d21")
+  } else if (MTRL == "Feces") {
+    DAYS <- c("d0","d08","d12","d16","d20","d21")
+  }
 for (DAY in DAYS) {
   print(paste0("Processing day ",DAY,"..."))
   for (FEED in FEEDS) {
     for (METRIC in METRICES) {
-      load("R_objects/Phyloseq_betadiv.Rdata")
+  load(paste0("R_objects/Phyloseq_betadiv_",MTRL,".Rdata"))
       if (FEED == "ALL") {
         FILENAME <- paste0("R_objects/bdiv_sub_",MTRL,"_",DAY,"_",METRIC,".Rdata")
       } else {
           FILENAME <- paste0("R_objects/bdiv_sub_",MTRL,"_",DAY,"_",FEED,"_",METRIC,".Rdata")
       }
       if (METRIC == "unif") {
-        load("R_objects/bdiv_unif.RData")
+        load(paste0("R_objects/bdiv_unif_",MTRL,".RData"))
         tmp.dist <- as.matrix(unif.dist)
         if (FEED == "ALL") {
           phy.sub <- subset_samples(phy.rare, material == MTRL & day %in% DAY)
@@ -315,7 +330,7 @@ for (DAY in DAYS) {
         
         save(phy.sub, unif.sub.dist, unif.sub.nmds, unif.sub.pcoa, file = FILENAME)
       } else if (METRIC == "wuf") {
-        load("R_objects/bdiv_wunif.RData")
+        load(paste0("R_objects/bdiv_wuf_",MTRL,".RData"))
         tmp.dist <- as.matrix(wuf.dist)
         
         if (FEED == "ALL") {
@@ -333,7 +348,7 @@ for (DAY in DAYS) {
         
         save(phy.sub, wuf.sub.dist, wuf.sub.nmds, wuf.sub.pcoa, file = FILENAME)
       } else if (METRIC == "bray") {
-        load("R_objects/bdiv_bray.RData")
+        load(paste0("R_objects/bdiv_bray_",MTRL,".RData"))
         tmp.dist <- as.matrix(bray.dist)
         
         if (FEED == "ALL") {
@@ -351,7 +366,7 @@ for (DAY in DAYS) {
         
         save(phy.sub, bray.sub.dist, bray.sub.pcoa, bray.sub.nmds, file = FILENAME)
       } else if (METRIC == "jac") {
-        load("R_objects/bdiv_jac.RData")
+        load(paste0("R_objects/bdiv_jac_",MTRL,".RData"))
         tmp.dist <- as.matrix(jac.dist)
         
         if (FEED == "ALL") {
@@ -369,7 +384,7 @@ for (DAY in DAYS) {
         
         save(phy.sub, jac.sub.dist, jac.sub.pcoa, jac.sub.nmds, file = FILENAME)
       } else if (METRIC == "ait") {
-        load("R_objects/bdiv_ait.RData")
+        load(paste0("R_objects/bdiv_ait_",MTRL,".RData"))
         tmp.dist <- as.matrix(ait.dist)
         
         if (FEED == "ALL") {
@@ -389,6 +404,7 @@ for (DAY in DAYS) {
       }
     }
   }
+}
 }
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE))
@@ -883,7 +899,7 @@ ggplot(axis.tab, aes_string(x = "ordination", y = "position", fill = VAR)) +
 
 # Create NMDS plot
 plot.nmds <- ggplot(ord.tab[ord.tab$ordination == "nmds",], aes_string(x = "Axis.1", y = "Axis.2", color = VAR, group = VAR)) +
-  geom_point() + 
+  geom_point() +
   labs(color=VAR) +
   theme_pubr(legend = "bottom")+
   stat_ellipse() + scale_color_manual(values = params$COL)
@@ -903,20 +919,20 @@ plot.legend <- get_legend(plot.nmds)
 
 # Draw plot
 p.done <- ggdraw() + 
-  draw_plot(plot.nmds2, 0, 0.1, 0.5, 0.9) + 
-  draw_plot(plot.pcoa2, 0.5, 0.1, 0.5, 0.9) +
+  draw_plot(plot.pcoa2, 0, 0.1, 1, 0.9) + 
+  #draw_plot(plot.pcoa2, 0.5, 0.1, 0.5, 0.9) +
   draw_grob(plot.legend, 0, 0, 1, .1) +
-  draw_plot_label("NMDS") + 
-  draw_plot_label("PCoA", x = 0.5) + 
+  draw_plot_label("PCOA") + 
+  #draw_plot_label("PCoA", x = 0.5) + 
   theme(plot.background = element_rect(fill="white", color = NA))
 
 p.done
 
 # Save plot
 plotfile <- file.path("plots",paste0("bdiv/",MTRL,"_",DAY,"/bdiv_ordination_",VAR,"_",FEED,"_",METRIC,".png"))
-ggsave(filename = plotfile, plot = p.done, width = 14, height = 7,units = "in",dpi = 300, device = "png")
+ggsave(filename = plotfile, plot = p.done, width = 7, height = 7,units = "in",dpi = 300, device = "png")
 plotfile <- file.path("plots",paste0("bdiv/",MTRL,"_",DAY,"/bdiv_ordination_",VAR,"_",FEED,"_",METRIC,".pdf"))
-ggsave(filename = plotfile, plot = p.done, width = 14, height = 7,units = "in",dpi = 300, device = "pdf")
+ggsave(filename = plotfile, plot = p.done, width = 7, height = 7,units = "in",dpi = 300, device = "pdf")
 
 # Calculate betadispertion
 bdisp <- betadisper(dist.used, mdat[,VAR])
@@ -932,11 +948,12 @@ plot(TukeyHSD(bdisp))
 boxplot(bdisp)
 
 # Perform test
-if (FEED == "All") {
-  PERM <- adonis2(dist.used ~ treatment*feed, data = mdat, strata = mdat$day, permutations = 999, na.action = na.omit)
+if (FEED == "ALL") {
+  PERM <- adonis2(dist.used ~ feed*treatment, data = mdat, strata = mdat$day, permutations = 999, na.action = na.omit)
 } else {
   PERM <- adonis2(dist.used ~ treatment, data = mdat, strata = mdat$day, permutations = 999, na.action = na.omit)
 }
+PERM
 write.table(PERM, file = paste0("plots/bdiv/",MTRL,"_",DAY,"/bdiv_PERM_",VAR,"_",FEED,"_",METRIC,".txt"))
     }
   }
