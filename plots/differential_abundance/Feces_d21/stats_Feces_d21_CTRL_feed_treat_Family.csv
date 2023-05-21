@@ -1,0 +1,2 @@
+"","Feature","pval","pval.adj","log2FC","ordering","Method","Kingdom","Phylum","Class","Order","Family","Genus","Species"
+"35","ASV_0325",0.000887532376260949,0.0399389569317427,0.356550605100293,"B_CTRL>A_CTRL","t-test (ttt)","Bacteria","Proteobacteria","Betaproteobacteria","Burkholderiales","Sutterellaceae",NA,NA

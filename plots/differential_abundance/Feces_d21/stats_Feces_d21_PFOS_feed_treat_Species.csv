@@ -1,0 +1,8 @@
+"","Feature","pval","pval.adj","log2FC","ordering","Method","Kingdom","Phylum","Class","Order","Family","Genus","Species"
+"4","ASV_0005",0.000712627106739422,0.0141337709503319,3.73846214374058,"B_PFOS>A_PFOS","t-test - CLR (ttc)","Bacteria","Firmicutes","Bacilli","Lactobacillales","Lactobacillaceae","Lactobacillus","intestinalis"
+"11","ASV_0013",0.000588680192298014,0.0140105885766927,4.64332117123351,"B_PFOS>A_PFOS","t-test - CLR (ttc)","Bacteria","Actinobacteria","Actinobacteria","Bifidobacteriales","Bifidobacteriaceae","Bifidobacterium","animalis"
+"31","ASV_0046",0.000462157015002028,0.0137491711963103,-3.50101959796017,"A_PFOS>B_PFOS","t-test - CLR (ttc)","Bacteria","Proteobacteria","Deltaproteobacteria","Desulfovibrionales","Desulfovibrionaceae","Bilophila","wadsworthia"
+"46","ASV_0087",5.55553759535952e-05,0.00423374729347019,-4.07196769463493,"A_PFOS>B_PFOS","t-test - CLR (ttc)","Bacteria","Firmicutes","Erysipelotrichia","Erysipelotrichales","Erysipelotrichaceae","Longicatena","Genus_Longicatena"
+"55","ASV_0114",7.11554166969779e-05,0.00423374729347019,2.19179890901089,"B_PFOS>A_PFOS","t-test - CLR (ttc)","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Rikenellaceae","Alistipes","obesi"
+"59","ASV_0124",0.000428527272179548,0.0137491711963103,3.38851639990437,"B_PFOS>A_PFOS","t-test - CLR (ttc)","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Bacteroidaceae","Bacteroides","stercoris"
+"65","ASV_0143",0.00204427591725546,0.0347526905933428,-2.49712991533343,"A_PFOS>B_PFOS","t-test - CLR (ttc)","Bacteria","Firmicutes","Bacilli","Bacillales","Staphylococcaceae","Staphylococcus","epidermidis/haemolyticus/petrasii"
