@@ -157,7 +157,6 @@ library(forcats)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-library(ggbreak)
 library(cowplot)
 library(DAtest)
 
@@ -3713,7 +3712,7 @@ p.fil <- plot(filt.test)
 p.fil
 
 # Run DAtest
-DA.tta(t(dat.SCFA), dat.clean$treatment)
+DA.ttt(t(dat.SCFA), dat.clean$treatment)
 DA.per(t(dat.SCFA), dat.clean$treatment)
 DA.wil(t(dat.SCFA), dat.clean$treatment)
 
@@ -3730,6 +3729,21 @@ No significant difference based on PFOS treatment
 # BRAY-CURTIS
 dist.bray <- vegdist(as.matrix(dat.SCFA), method = "bray")
 
+# Ordination
+bray.pcoa <- pcoa(dist.bray)
+
+bray.df <- data.frame(pcoa1 = bray.pcoa$vectors[,1],
+                 pcoa2 = bray.pcoa$vectors[,2],
+                 pcoa3 = bray.pcoa$vectors[,3],
+                 pcoa4 = bray.pcoa$vectors[,4],
+                 pcoa5 = bray.pcoa$vectors[,5])
+
+dat.pcoa <- cbind(bray.df,
+            feed = dat.clean$feed,
+            treatment = dat.clean$treatment,
+            feedtreat = dat.clean$feedtreat,
+            cage = dat.clean$cage)
+
 # PERMANOVA
 adonis2(dist.bray ~ feed*treatment, data = dat.clean)
 
@@ -3737,30 +3751,41 @@ adonis2(dist.bray ~ feed*treatment, data = dat.clean)
 # create ordination
 
 
-# Create plots of eigenvalues for PCoA plots
-pcoa.tab <- plot_ordination(dat.SCFA, dist.bray,axes = 1:5,justDF = TRUE)
-nmds.tab <- plot_ordination(phy.used, nmds.used,axes = 1:5,justDF = TRUE)
+# # Create plots of eigenvalues for PCoA plots
+# pcoa.tab <- plot_ordination(dat.SCFA, dist.bray,axes = 1:5,justDF = TRUE)
+# nmds.tab <- plot_ordination(phy.used, nmds.used,axes = 1:5,justDF = TRUE)
+# 
+# # Reformat tables to create one common table
+# colnames(nmds.tab)[1:5] <- c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5")
+# 
+# nmds.tab$ordination <- "nmds"
+# pcoa.tab$ordination <- "pcoa"
+# 
+# ord.tab <- rbind(nmds.tab,pcoa.tab)
+# ord.tab[,VAR] <- as.factor(ord.tab[,VAR])
+# 
+# # Melt axis to be in one variable
+# axis.tab <- pivot_longer(data = ord.tab, cols = c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5"), names_to = "Axis", values_to = "position")
+# 
+# # Plot positions on axes
+# ggplot(axis.tab, aes_string(x = "ordination", y = "position", fill = VAR)) +
+#   geom_boxplot() +
+#   facet_grid(Axis~.) +
+#   coord_flip() + 
+#   theme_pubr(legend = "bottom") + scale_fill_manual(values = params$COL)#ggsci::scale_fill_jco()
 
-# Reformat tables to create one common table
-colnames(nmds.tab)[1:5] <- c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5")
+# Create PCoA plot
+plot.pcoa <- ggplot(dat.pcoa, aes(x = pcoa1, y = pcoa2, color = feedtreat)) +
+  geom_point() + 
+  theme_pubr(legend = "none") + 
+  stat_ellipse() +
+  scale_color_manual(values = params$COL1)
+plot.pcoa
 
-nmds.tab$ordination <- "nmds"
-pcoa.tab$ordination <- "pcoa"
+plot.pcoa2 <- ggExtra::ggMarginal(p = plot.pcoa, type = 'boxplot', size = 10, groupFill = TRUE)
+plot.pcoa2
 
-ord.tab <- rbind(nmds.tab,pcoa.tab)
-ord.tab[,VAR] <- as.factor(ord.tab[,VAR])
-
-# Melt axis to be in one variable
-axis.tab <- pivot_longer(data = ord.tab, cols = c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5"), names_to = "Axis", values_to = "position")
-
-# Plot positions on axes
-ggplot(axis.tab, aes_string(x = "ordination", y = "position", fill = VAR)) +
-  geom_boxplot() +
-  facet_grid(Axis~.) +
-  coord_flip() + 
-  theme_pubr(legend = "bottom") + scale_fill_manual(values = params$COL)#ggsci::scale_fill_jco()
-
-
+suppressMessages(ggsave(filename = "plots/animal_data/scfa/PCOA_feedtreat.png", device = "png", dpi = 300, height = 150, width = 150, units = "mm"))
 
 ```
 
