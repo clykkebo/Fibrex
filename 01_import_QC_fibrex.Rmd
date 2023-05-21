@@ -28,19 +28,19 @@ This document contains the commands necessary to perform initial import and QC o
 
 Metadata added contains results from:
 
-Carmine treatment (0 = no and 1 = yes) for different days.
+- Carmine treatment (0 = no and 1 = yes) for different days.
 
-Bodyweight per sampling day (day 0, 8, 12, 16, 20 and 21), and cecum and liver weight per dissection day (day 8 and 21).
+- Body weight per sampling day (day 0, 8, 12, 16, 20 and 21), and cecum and liver weight per dissection day (day 8 and 21).
 
-PFOS quantification of:
-- systemic concentrations in blood serum from day 8, 16 and 21, liver and brain tissues (day 8 and 21).
-- wash-out concentrations in urine from day 8, 16 and 21, feces from day 8, 12, 16 and 21, and cecum (day 8 and 21).
+- PFOS quantification of:
+  + systemic concentrations in blood serum from day 8, 16 and 21, liver and brain tissues (day 8 and 21).
+  + wash-out concentrations in urine from day 8, 16 and 21, feces from day 8, 12, 16 and 21, and cecum (day 8 and 21).
 
-Short-chain fatty acids quantification of 10 compounds in cecum given in mM per dissection day (day 8 and 21).
+- Short-chain fatty acids quantification of 10 compounds in cecum given in mM per dissection day (day 8 and 21).
 
-pH-values from upper and lower jejunum, ileum and cecum in separate columns: pH_je_up, pH_je_low, pH_il, pH_ce per day. Also one pH column "pH" with values fitting each sample type (feces are assigned cecum values).
+- pH-values from upper and lower jejunum, ileum and cecum in separate columns: pH_je_up, pH_je_low, pH_il, pH_ce per day. Also one pH column "pH" with values fitting each sample type (feces are assigned cecum values).
 
-Transit time for each day (day 0 = measurement from day 0; day 8 = measurement from day 7; day 21 = measurement from day 20)
+- Transit time for each day (day 0 = measurement from day 0; day 8 = measurement from day 7; day 21 = measurement from day 20)
 
 
 ```{r setup, eval=TRUE, echo=TRUE, message=FALSE,warning = FALSE}
@@ -63,7 +63,7 @@ saveRDS(params, file = "R_objects/import_params.RDS")
 
 # IMPORT AND MERGE
 
-This section will import and merge phyloseq and metadata
+This section will import and merge phyloseq data and metadata.
 
 ## SEQUENCING DATA
 
@@ -103,7 +103,7 @@ The section also creates a variable that matches the unique sample names and hig
 tmp <- data.frame(sample_data(phy))
 
 # Load metadata - This part will be specific to the project
-meta <- read_csv(params$meta)
+meta <- read.csv(params$meta, header = TRUE, sep = ";", dec = ",")
 
 # Create an identical ID variable to use for merging
 meta$SampleID <- with(meta, paste(Run,sample_name, sep = "_"))
@@ -346,6 +346,8 @@ save(contam.df, contam.long, file = "R_objects/Decontam_tables.RData")
 
 *complete decontam classifications is saved in: "**R_objects/Decontam_tables.RData**"*
 
+![Contaminant Fraction](plots/contaminant_fraction_multiple.png){width="100%"}
+
 #### COMPARE
 
 The mean abundance classified as contaminant for each sample type and Decontam setting: ![Abundance classified as contaminant](plots/contaminant_fraction_multiple.png){width="100%"}
@@ -362,6 +364,7 @@ with(contam.long, table(Method,Contaminant))
 #### FILTER
 
 This section contains the actual decontamination. This should be performed as harshly as makes sense for each specific project, but I suggest basing this on the comparisons above, considering that contaminants in the mock sample is unlikely, while as much as the negative control should be removed.
+Based on the above decontamination analysis and testing out the MOCK (see below), Freq.minimum and Freq.product where selected.
 
 ```{r Decontam-filter, eval=TRUE,echo=TRUE}
 

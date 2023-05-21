@@ -8,6 +8,7 @@ editor_options:
 
 ## Intro
 
+This repository covers processing and analyses of data collected Fibrex project 
 
 "day" *d0*, *d8*, *d12*, *d16*, *d20*, *d21*
 
