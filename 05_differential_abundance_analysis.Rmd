@@ -22,9 +22,9 @@ params:
     batch: "Run"
     indeces: "Observed|Shannon|FaithPD|Chao1"
     COL0: !r c("CTRL" = "#eeeeee","PFOS" = "#666666")
-    COL1: !r c("A_CTRL" = "#a5cee3","A_PFOS" = "#1778b6","B_CTRL" = "#b4d88a","B_PFOS" = "#30a148")
-    COL2: !r c("A_CTRL_d8" = "#a5cee3","A_CTRL_d21" = "#a5cee3","A_PFOS_d8" = "#1778b6","A_PFOS_d21" = "#1778b6","B_CTRL_d8" = "#b4d88a","B_CTRL_d21" = "#b4d88a","B_PFOS_d8" = "#30a148","B_PFOS_d21" = "#30a148")
-    COLFEED: !r c("A" = "#1778b6","B" = "#30a148")
+    COL1: !r c("LF_CTRL" = "#a5cee3","LF_PFOS" = "#1778b6","HF_CTRL" = "#b4d88a","HF_PFOS" = "#30a148")
+    COL2: !r c("LF_CTRL_d8" = "#a5cee3","LF_CTRL_d21" = "#a5cee3","LF_PFOS_d8" = "#1778b6","LF_PFOS_d21" = "#1778b6","HF_CTRL_d8" = "#b4d88a","HF_CTRL_d21" = "#b4d88a","HF_PFOS_d8" = "#30a148","HF_PFOS_d21" = "#30a148")
+    COLFEED: !r c("LF" = "#1778b6","HF" = "#30a148")
 ---
 
 # GMH ASV ANALYSIS PIPELINE
@@ -190,6 +190,9 @@ params <- readRDS("R_objects/comp_params.RDS")
 # load
 load(params$input)
 
+# Remove day 20
+phy <- subset_samples(physeq = phy, day %in% c("d0","d08","d12","d16","d21"))
+
 # agglomerate at species and genus level
 phy.sp <- tax_glom(phy, taxrank = "Species")
 phy.ge <- tax_glom(phy, taxrank = "Genus")
@@ -209,16 +212,18 @@ invisible(gc())
 
 ## AGGLOMERATE DATA - ITERATIONS
 
-The following section agglomerates the data on taxonomic levels based on subsets of Material (Feces, Ileum, or Cecum), Day of sampling (Day 0, 8, 12, 16, 20, and 21), Feed type (A = No fibre, B = Fibre), and Treatment (CTRL = Control, PFOS = PFOS). Agglomerations are saved in files with a specific naming convention for easy calling in further analysis.
+The following section agglomerates the data on taxonomic levels based on subsets of Material (Feces, Ileum, or Cecum), Day of sampling (Day 0, 8, 12, 16, 20, and 21), Feed type (LF = Low fibre, HF = High fibre), and Treatment (CTRL = Control, PFOS = PFOS). Agglomerations are saved in files with a specific naming convention for easy calling in further analysis.
 
 ```{r agglomerate_day, eval=TRUE, echo=TRUE}
 params <- readRDS("R_objects/comp_params.RDS")
 # load
 load(params$input)
-str.agg <- c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",
-             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",
-             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
-  
+
+# Remove day 20
+phy <- subset_samples(physeq = phy, day %in% c("d0","d08","d12","d16","d21"))
+
+str.agg <- c("Feces","Feces_LF","Feces_HF","Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS","Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d21","Feces_d0d08","Feces_d08d21") #,"Feces_d20"
+SUBNAME <- "Cecum"  
 for (SUBNAME in str.agg) {
   # Determine material parameter
   if (grepl("Feces",SUBNAME) == TRUE) {
@@ -239,8 +244,8 @@ for (SUBNAME in str.agg) {
     DAY <- c("d08")
     dn <- "day8"
   } else if (grepl("_d08d21",SUBNAME) == TRUE) {
-    DAY <- c("d08")
-    dn <- "day8"
+    DAY <- c("d08","d21")
+    dn <- "day8+21"
   } else if (grepl("_d0",SUBNAME) == TRUE) {
     DAY <- "d0"
     dn <- "day0"
@@ -250,9 +255,9 @@ for (SUBNAME in str.agg) {
   } else if (grepl("_d16",SUBNAME) == TRUE) {
     DAY <- "d16"
     dn <- "day16"
-  } else if (grepl("_d20",SUBNAME) == TRUE) {
-    DAY <- "d20"
-    dn <- "day20"
+  # } else if (grepl("_d20",SUBNAME) == TRUE) {
+  #   DAY <- "d20"
+  #   dn <- "day20"
   } else if (grepl("_d21",SUBNAME) == TRUE) {
     DAY <- "d21"
     dn <- "day21"
@@ -262,45 +267,37 @@ for (SUBNAME in str.agg) {
   # Determine parameters for differential abundance in feed and treatment groups
   if (grepl(paste0(MTRL,"_CTRL"),SUBNAME) == TRUE) {
     TREAT <- "CTRL"
-    FEED <- c("A","B")
+    FEED <- c("LF","HF")
   } else if (grepl(paste0(MTRL,"_PFOS"),SUBNAME) == TRUE) {
     TREAT <- "PFOS"
-    FEED <- c("A","B")
-  } else if (grepl("_A_CTRL",SUBNAME) == TRUE) {
+    FEED <- c("LF","HF")
+  } else if (grepl("_LF_CTRL",SUBNAME) == TRUE) {
     TREAT <- "CTRL"
-    FEED <- "A"
-  } else if (grepl("_A_PFOS",SUBNAME) == TRUE) {
+    FEED <- "LF"
+  } else if (grepl("_LF_PFOS",SUBNAME) == TRUE) {
     TREAT <- "PFOS"
-    FEED <- "A"
-  } else if (grepl("_B_CTRL",SUBNAME) == TRUE) {
+    FEED <- "LF"
+  } else if (grepl("_HF_CTRL",SUBNAME) == TRUE) {
     TREAT <- "CTRL"
-    FEED <- "B"
-  } else if (grepl("_B_PFOS",SUBNAME) == TRUE) {
+    FEED <- "HF"
+  } else if (grepl("_HF_PFOS",SUBNAME) == TRUE) {
     TREAT <- "PFOS"
-    FEED <- "B"
-  } else if (grepl(paste0(MTRL,"_A"),SUBNAME) == TRUE) {
+    FEED <- "HF"
+  } else if (grepl(paste0(MTRL,"_LF"),SUBNAME) == TRUE) {
     TREAT <- c("CTRL","PFOS")
-    FEED <- "A"
-  } else if (grepl(paste0(MTRL,"_B"),SUBNAME) == TRUE) {
+    FEED <- "LF"
+  } else if (grepl(paste0(MTRL,"_HF"),SUBNAME) == TRUE) {
     TREAT <- c("CTRL","PFOS")
-    FEED <- "B"
+    FEED <- "HF"
   } else if (dn == "all_days") {
     TREAT <- c("CTRL","PFOS")
-    FEED <- c("A","B")
+    FEED <- c("LF","HF")
   } else if (exists("dn") == TRUE) {
   } else {
     print("Something went wrong...")
   }
-  ####### LOOP CHECK ############
-#   if (exists("DAY") == TRUE){
-#   print(paste0(SUBNAME," = ",MTRL,"_",FEED,"_",TREAT,"_",DAY))
-#   } else {
-#     print(paste0(SUBNAME," = ",MTRL,"_",FEED,"_",TREAT))
-#   }
-# }
-  ###############################
 
-#Subset data
+  #Subset data
   if (exists("DAY") == TRUE) {
     phy.sub <- subset_samples(phy, material == MTRL & day %in% DAY) 
   } else if (exists("DAY") == FALSE) {
@@ -319,6 +316,7 @@ phy.ph <- tax_glom(phy.sub, taxrank = "Phylum")
 
 save(phy.sp, phy.ge, phy.fa, phy.or, phy.cl, phy.ph, file = paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 print(paste0("Processed ",SUBNAME," correctly!"))
+suppressWarnings(rm(MTRL,mn,DAY,dn,TREAT,FEED,phy.sp, phy.ge, phy.fa, phy.or, phy.cl, phy.ph,phy.sub), classes = "warning")
 }
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE))
@@ -333,7 +331,7 @@ There are many different methods that can be used to calculate differential abun
 
 ## FECES
 In the following we take a look at differential abundance in feces samples, dividing the analyses into Days and type of test:
-  - Test of PFOS effect on taxa abundance (calling SUBNAME = _A & _B)
+  - Test of PFOS effect on taxa abundance (calling SUBNAME = _LF & _HF)
   - Test of FEED effect on taxa abundance (calling SUBNAME = _CTRL & _PFOS)
   
 We test all on three taxonomic levels:
@@ -345,7 +343,7 @@ We test all on three taxonomic levels:
 Day 0 samples should have no taxonomic differences between Treatment groups while a difference is expected in Feed. Therefore we test only these two variables on the entire dataset (cross analysis should not be necessary).
 
 #### FEED
-Testing differential abundance between feeding groups A = No fibre and B = Fibre.
+Testing differential abundance between feeding groups LF = Low fibre, HF = High fibre.
 
 ##### SPECIES
 **TEST METHOD**
@@ -356,10 +354,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d0" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed" #c("treatment","feed")
-SUBNAME <- "Feces_d0" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d0" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -371,7 +369,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -423,9 +421,18 @@ DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05], x = filt.ra)
 # melt the data
 DAm <- psmelt(DA.sig)
 
-# Create plot
+# Calculate pseudocount
 pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COLFEED, breaks = c("A","B")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw() + labs(fill = "Feed")
+
+# Create plot
+p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed))) +
+  geom_boxplot() + 
+  scale_y_log10() + 
+  coord_flip() + 
+  scale_fill_manual(name = "Feed", values = params$COLFEED, breaks = c("HF","LF")) + 
+  facet_grid(Phylum ~ . , scales = "free_y", space = "free") + 
+  theme_bw() + 
+  labs(fill = "Feed")
 p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY))
 p.dT
 
@@ -454,10 +461,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d0" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed" #c("treatment","feed")
-SUBNAME <- "Feces_d0" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d0" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -469,7 +476,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -523,7 +530,7 @@ DAm <- psmelt(DA.sig)
 
 # Create plot
 pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COLFEED, breaks = c("A","B")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw() + labs(fill = "Feed")
+p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COLFEED, breaks = c("LF","HF")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw() + labs(fill = "Feed")
 p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY))
 p.dT
 
@@ -544,10 +551,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d0" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed" #c("treatment","feed")
-SUBNAME <- "Feces_d0" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d0" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -559,7 +566,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -613,7 +620,7 @@ DAm <- psmelt(DA.sig)
 
 # Create plot
 pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COLFEED, breaks = c("A","B")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw() + labs(fill = "Feed")
+p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COLFEED, breaks = c("LF","HF")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw() + labs(fill = "Feed")
 p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY))
 p.dT
 
@@ -636,10 +643,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d0" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "treatment" #c("treatment","feed")
-SUBNAME <- "Feces_d0" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d0" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -651,7 +658,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -734,10 +741,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d0" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "treatment" #c("treatment","feed")
-SUBNAME <- "Feces_d0" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d0" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -749,7 +756,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -824,10 +831,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d0" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "treatment" #c("treatment","feed")
-SUBNAME <- "Feces_d0" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d0" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -839,7 +846,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -926,10 +933,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d08" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d08" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d08" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -940,7 +947,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -1021,10 +1028,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d08" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d08" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d08" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -1036,7 +1043,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -1115,10 +1122,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d08" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d08" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d08" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -1130,7 +1137,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -1213,10 +1220,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d08" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d08" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d08" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -1227,7 +1234,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -1314,10 +1321,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d08" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d08" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d08" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -1329,7 +1336,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -1408,10 +1415,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d08" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d08" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d08" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -1423,7 +1430,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -1508,10 +1515,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d08" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d08" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d08" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -1522,7 +1529,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -1576,7 +1583,7 @@ DAm <- psmelt(DA.sig)
 
 # Create plot
 pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
 p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
 p.dT
 
@@ -1599,10 +1606,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d08" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d08" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d08" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -1614,7 +1621,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -1668,7 +1675,7 @@ DAm <- psmelt(DA.sig)
 
 # Create plot
 pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
 p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
 p.dT
 
@@ -1689,10 +1696,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d08" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d08" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d08" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -1704,7 +1711,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -1758,7 +1765,7 @@ DAm <- psmelt(DA.sig)
 
 # Create plot
 pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
 p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
 p.dT
 
@@ -1782,10 +1789,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d08" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d08" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d08" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -1796,7 +1803,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -1850,7 +1857,7 @@ DAm <- psmelt(DA.sig)
 
 # Create plot
 pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
 p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
 p.dT
 
@@ -1872,10 +1879,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d08" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d08" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d08" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -1887,7 +1894,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -1941,7 +1948,7 @@ DAm <- psmelt(DA.sig)
 
 # Create plot
 pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
 p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
 p.dT
 
@@ -1962,10 +1969,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d08" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d08" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d08" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -1977,7 +1984,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -2031,7 +2038,7 @@ DAm <- psmelt(DA.sig)
 
 # Create plot
 pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
 p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
 p.dT
 
@@ -2057,10 +2064,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d12" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d12" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d12" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -2071,7 +2078,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -2101,13 +2108,6 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
     p.fil
     dev.off()
 
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
-
-```{r DAtest_species, eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -2126,7 +2126,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("A_CTRL","A_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("LF_CTRL","LF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -2155,10 +2155,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d12" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d12" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d12" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -2170,7 +2170,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -2225,7 +2225,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("A_CTRL","A_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("LF_CTRL","LF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -2253,10 +2253,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d12" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d12" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d12" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -2268,7 +2268,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -2323,7 +2323,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("A_CTRL","A_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("LF_CTRL","LF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -2355,10 +2355,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d12" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d12" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d12" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -2369,7 +2369,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -2424,7 +2424,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("B_CTRL","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("HF_CTRL","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -2453,10 +2453,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d12" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d12" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d12" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -2468,7 +2468,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -2523,7 +2523,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("B_CTRL","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("HF_CTRL","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -2551,10 +2551,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d12" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d12" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d12" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -2566,7 +2566,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -2621,7 +2621,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("B_CTRL","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("HF_CTRL","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -2655,10 +2655,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d12" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d12" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d12" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -2669,7 +2669,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -2724,7 +2724,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -2753,10 +2753,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d12" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d12" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d21","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d12" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d21","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -2768,7 +2768,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -2823,7 +2823,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -2851,10 +2851,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d12" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d12" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d12" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -2866,7 +2866,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -2921,7 +2921,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -2952,10 +2952,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d12" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d12" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d12" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -2966,7 +2966,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -3021,7 +3021,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -3050,10 +3050,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d12" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d12" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d12" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -3065,7 +3065,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -3120,7 +3120,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -3148,10 +3148,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d12" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d12" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d12" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -3163,7 +3163,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -3218,7 +3218,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -3254,10 +3254,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d16" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d16" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d16" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -3268,7 +3268,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -3323,7 +3323,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("A_CTRL","A_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("LF_CTRL","LF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -3352,10 +3352,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d16" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d16" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d16" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -3367,7 +3367,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -3422,7 +3422,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("A_CTRL","A_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("LF_CTRL","LF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -3449,11 +3449,11 @@ params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
-DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+DAY <- "d16" #c("d0","d08","d12","d16","d20","d21")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -3465,7 +3465,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -3520,7 +3520,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("A_CTRL","A_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("LF_CTRL","LF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -3552,10 +3552,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -3566,7 +3566,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -3621,7 +3621,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("B_CTRL","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("HF_CTRL","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -3650,10 +3650,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -3665,7 +3665,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -3720,7 +3720,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("B_CTRL","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("HF_CTRL","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -3748,10 +3748,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -3763,7 +3763,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -3818,7 +3818,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("B_CTRL","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("HF_CTRL","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -3852,10 +3852,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -3866,7 +3866,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -3921,7 +3921,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -3950,10 +3950,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d21","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d21","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -3965,7 +3965,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -4020,7 +4020,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -4048,10 +4048,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4063,7 +4063,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -4118,7 +4118,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -4149,10 +4149,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4163,7 +4163,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -4218,7 +4218,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -4247,10 +4247,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4262,7 +4262,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -4317,7 +4317,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -4345,10 +4345,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4360,7 +4360,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -4415,7 +4415,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -4451,10 +4451,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4465,7 +4465,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -4520,7 +4520,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("A_CTRL","A_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("LF_CTRL","LF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -4549,10 +4549,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4564,7 +4564,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -4619,7 +4619,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("A_CTRL","A_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("LF_CTRL","LF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -4647,10 +4647,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4662,7 +4662,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -4717,7 +4717,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("A_CTRL","A_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("LF_CTRL","LF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -4749,10 +4749,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4763,7 +4763,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -4818,7 +4818,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("B_CTRL","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("HF_CTRL","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -4847,10 +4847,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4862,7 +4862,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -4917,7 +4917,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("B_CTRL","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("HF_CTRL","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -4945,10 +4945,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4960,7 +4960,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -5015,7 +5015,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("B_CTRL","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("HF_CTRL","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -5049,10 +5049,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -5063,7 +5063,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -5118,7 +5118,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -5147,10 +5147,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d21","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d21","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -5162,7 +5162,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -5217,7 +5217,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -5245,10 +5245,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -5260,7 +5260,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -5315,7 +5315,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -5346,10 +5346,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -5360,7 +5360,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -5415,7 +5415,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -5444,10 +5444,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -5459,7 +5459,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -5514,7 +5514,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -5542,10 +5542,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -5557,7 +5557,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -5612,7 +5612,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -5650,10 +5650,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -5664,7 +5664,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -5719,7 +5719,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("A_CTRL","A_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("LF_CTRL","LF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -5748,10 +5748,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -5763,7 +5763,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -5818,7 +5818,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("A_CTRL","A_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("LF_CTRL","LF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -5846,10 +5846,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "A" #c("A","B")
+FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -5861,7 +5861,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -5916,7 +5916,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("A_CTRL","A_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("LF_CTRL","LF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -5948,10 +5948,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -5962,7 +5962,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -6017,7 +6017,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("B_CTRL","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("HF_CTRL","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -6046,10 +6046,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -6061,7 +6061,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -6116,7 +6116,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("B_CTRL","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("HF_CTRL","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -6144,10 +6144,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-FEED <- "B" #c("A","B")
+FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -6159,7 +6159,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -6214,7 +6214,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("B_CTRL","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("Control","PFOS"), breaks = c("HF_CTRL","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",FEED))
   p.dT
   
@@ -6248,10 +6248,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -6262,7 +6262,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -6317,7 +6317,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -6346,10 +6346,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d21","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d21","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -6361,7 +6361,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -6416,7 +6416,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -6444,10 +6444,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -6459,7 +6459,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -6514,7 +6514,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_CTRL","B_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_CTRL","HF_CTRL")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -6545,10 +6545,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -6559,7 +6559,7 @@ if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.sp <- subset_samples(phy.sp, day %in% DAY)
@@ -6614,7 +6614,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Species, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -6643,10 +6643,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -6658,7 +6658,7 @@ if (exists("FEED") == TRUE) {
   phy.ge <- subset_samples(phy.ge, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.ge <- subset_samples(phy.ge, day %in% DAY)
@@ -6713,7 +6713,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Genus, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -6741,10 +6741,10 @@ params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
 DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
-#FEED <- "A" #c("A","B")
+#FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_A","Feces_B","Feces_CTRL","Feces_PFOS","Feces_A_CTRL","Feces_A_PFOS","Feces_B_CTRL","Feces_B_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_A","Ileum_B","Cecum","Cecum_A","Cecum_B")
+SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -6756,7 +6756,7 @@ if (exists("FEED") == TRUE) {
   phy.fa <- subset_samples(phy.fa, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
-  print("Data contains both feed A and B.")
+  print("Data contains both feed LF and HF.")
 }
 if (exists("DAY") == TRUE) {
   phy.fa <- subset_samples(phy.fa, day %in% DAY)
@@ -6811,7 +6811,7 @@ if (any(filt.p5$pval.adj > 0)) {
   
   # Create plot
   pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("A_PFOS","B_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
+  p.dif <- ggplot(DAm, aes(x = Family, y = Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, name = "Feed", labels = c("No fibre","Fibre"), breaks = c("LF_PFOS","HF_PFOS")) + facet_grid(Phylum ~ . , scales = "free_y", space = "free") + theme_bw()
   p.dT <- p.dif + ggtitle(paste0("Differential abundance on ",LVL," level for ",MTRL," ",DAY," ",TREAT))
   p.dT
   
@@ -6830,63 +6830,737 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
+# ILEUM & CAECUM
+Here we take a look at the differencial abundance driven by PFOS treatment (CTRL vs. PFOS) in the No fibre feeding group (A).
+
+##### Check for PFOS-driven DA
+
+```{r testDA_species, eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+params <- readRDS("R_objects/comp_params.RDS")
+LVL <- "Family"
+LVLS <- c("Species","Genus","Family","Order","Class","Phylum")
+MTRL <- "Ileum" #c("Feces","Ileum","Cecum")
+PDI <- "feed_treat" #c("treatment","feed")
+SUBNAME <- "Ileum_LF"
+SUBNAMES <- c("Cecum_HF","Cecum_LF","Ileum_HF","Ileum_LF") #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")"Ileum","Ileum_HF","Ileum_LF","Cecum",
+for (SUBNAME in SUBNAMES) {
+  load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
+  
+  # Create sub-folder
+  if (!file.exists(paste0("plots/differential_abundance/",SUBNAME))) dir.create(file.path(getwd(), paste0("plots/differential_abundance/",SUBNAME)))
+  
+  for (LVL in LVLS) {
+    
+    if (LVL == "Species") {
+      phy.used <- phy.sp
+    } else if (LVL == "Genus") {
+      phy.used <- phy.ge
+    } else if (LVL == "Family") {
+      phy.used <- phy.fa
+    } else if (LVL == "Order") {
+      phy.used <- phy.or
+    } else if (LVL == "Class") {
+      phy.used <- phy.cl
+    } else if (LVL == "Phylum") {
+      phy.used <- phy.ph
+    }
+    
+    # Filter data
+    filt <- preDA(data = phy.used, min.reads = 20, min.samples = 4)
+    
+    # Run the selected analysis
+    filt.DA <- DA.kru(filt, predictor = PDI)
+    
+    # Evaluate the plot and summary table
+    table(filt.DA$pval.adj < 0.05)
+    filt.p5 <- filt.DA[filt.DA$pval.adj < 0.05,]
+  
+    if (any(filt.p5$pval.adj > 0)) {
+      print(paste0("Something significant was found in ",SUBNAME," at ",LVL," level."))
+      # Create a subset of the samples
+      filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
+      DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05], x = filt.ra)
+      
+      # melt the data
+      DAm <- psmelt(DA.sig)
+      
+      # Create plot
+      pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
+      
+      # Statistics
+      stat.in <- DAm %>%
+        group_by(.data[[LVL]], feed, day) %>%
+        wilcox_test(as.formula("Abundance ~ feed_treat")) %>%
+        adjust_pvalue(method = "BH") %>%
+        add_significance("p.adj") %>% 
+        add_xy_position(x = "feed", dodge = 0.8) %>%
+        p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+      stat.in$y.position <- log10(stat.in$y.position)
+      stat.in
+      
+      stat.out <- DAm %>%
+        group_by(.data[[LVL]], day) %>%
+        wilcox_test(as.formula("Abundance ~ feed")) %>%
+        adjust_pvalue(method = "BH") %>%
+        add_significance("p.adj") %>% 
+        add_xy_position(x = "feed", dodge = 0.8) %>%
+        p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+      stat.out$y.position <- log10(stat.out$y.position)
+      stat.out
+      
+      p <- ggplot(DAm, aes(x = feed, y = Abundance+pseudocount)) +
+        geom_boxplot(aes(fill = fct_rev(feed_treat))) + 
+        scale_y_log10() + 
+    #    coord_flip() + 
+        scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("HF_CTRL" ="HF-CTRL","HF_PFOS" = "HF-PFOS","LF_CTRL" = "LF-CTRL","LF_PFOS" = "LF_PFOS"), breaks = c("HF_CTRL","HF_PFOS","LF_CTRL","LF_PFOS")) + 
+        facet_grid(day ~ .data[[LVL]] , scales = "free_y", space = "free", labeller = labeller(day = c("d08" = "Day 8","d21" = "Day 21"))) + 
+        theme_pubr(border = TRUE)
+      p
+      
+      p.stat <- p + stat_pvalue_manual(stat.in, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, color = "red") +
+      stat_pvalue_manual(stat.out, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE)
+      p.stat
+      
+      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/diffplot_",SUBNAME,"_",PDI,"_",LVL,".pdf"), p.stat, device = "pdf", units = "mm", width = 350, height = 200, dpi = 300))
+      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/diffplot_",SUBNAME,"_",PDI,"_",LVL,".png"), p.stat, device = "png", units = "mm", width = 350, height = 200, dpi = 300))
+      } else {
+        print(paste0("No significant results when testing ",PDI," in ",SUBNAME," at ",LVL," level."))
+      }
+    }
+  }
 
 
-## ENTEROBACTERIACEAE > GENERA
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+```
+
+```{r testDA_species, eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+params <- readRDS("R_objects/comp_params.RDS")
+LVL <- "Family"
+LVLS <- c("Species","Genus","Family")
+MTRL <- "Ileum_LF" #c("Feces","Ileum","Cecum")
+PDI <- "feed_treat" #c("treatment","feed")
+SUBNAME <- "Ileum_LF"
+SUBNAMES <- c("Ileum_HF","Ileum_LF","Cecum_HF","Cecum_LF") #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
+for (SUBNAME in SUBNAMES) {
+  load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
+  
+  # Create sub-folder
+  if (!file.exists(paste0("plots/differential_abundance/",SUBNAME))) dir.create(file.path(getwd(), paste0("plots/differential_abundance/",SUBNAME)))
+  
+  for (LVL in LVLS) {
+    
+  if (LVL == "Species") {
+    phy.used <- phy.sp
+  } else if (LVL == "Genus") {
+    phy.used <- phy.ge
+  } else if (LVL == "Family") {
+    phy.used <- phy.fa
+  }
+  
+# Filter data
+filt <- preDA(data = phy.used, min.reads = 20, min.samples = 4)
+
+# Run the selected analysis
+filt.DA <- DA.kru(filt, predictor = PDI)
+
+# Evaluate the plot and summary table
+table(filt.DA$pval.adj < 0.05)
+filt.p5 <- filt.DA[filt.DA$pval.adj < 0.05,]
+
+if (any(filt.p5$pval.adj > 0)) {
+  # Create a subset of the samples
+  filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
+  DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05], x = filt.ra)
+  
+  # melt the data
+  DAm <- psmelt(DA.sig)
+  
+  # Create plot
+  pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
+  
+  # Statistics
+stat.in <- DAm %>%
+  group_by(.data[[LVL]], feed, day) %>%
+  wilcox_test(as.formula("Abundance ~ feed_treat")) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_xy_position(x = "feed", dodge = 0.8) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+stat.in$y.position <- log10(stat.in$y.position)
+stat.in
+
+stat.out <- DAm %>%
+  group_by(.data[[LVL]], day) %>%
+  wilcox_test(as.formula("Abundance ~ feed")) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  add_xy_position(x = "feed", dodge = 0.8) %>%
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+stat.out$y.position <- log10(stat.out$y.position)
+stat.out
+  
+  p <- ggplot(DAm, aes(x = feed, y = Abundance+pseudocount)) +
+    geom_boxplot(aes(fill = fct_rev(feed_treat))) + 
+    scale_y_log10() + 
+#    coord_flip() + 
+    scale_fill_manual(values = params$COL1, name = "Treatment", labels = c("HF_CTRL" ="HF-CTRL","HF_PFOS" = "HF-PFOS","LF_CTRL" = "LF-CTRL","LF_PFOS" = "LF_PFOS"), breaks = c("HF_CTRL","HF_PFOS","LF_CTRL","LF_PFOS")) + 
+    facet_grid(day ~ .data[[LVL]] , scales = "free_y", space = "free", labeller = labeller(day = c("d08" = "Day 8","d21" = "Day 21"))) + 
+    theme_pubr(border = TRUE)
+  p
+  
+  p.stat <- p + stat_pvalue_manual(stat.in, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, color = "red") +
+  stat_pvalue_manual(stat.out, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE)
+  p.stat
+  
+  suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/diffplot_",SUBNAME,"_",PDI,"_",LVL,".pdf"), p.stat, device = "pdf", units = "mm", width = 350, height = 200, dpi = 300))
+  suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/diffplot_",SUBNAME,"_",PDI,"_",LVL,".png"), p.stat, device = "png", units = "mm", width = 350, height = 200, dpi = 300))
+} else {
+  if (exists("FEED") == TRUE) {
+  message(paste0("No significant results when testing ",PDI," in ",SUBNAME," subset for feed ",FEED,"."))
+  } else if (exists("TREAT") == TRUE) {
+  message(paste0("No significant results when testing ",PDI," in ",SUBNAME," subset for treatment ",TREAT,"."))
+  }
+}
+
+  }
+}
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+```
+
+# CAECUM
+
+
+# ENTEROBACTERIACEAE > GENERA
+## ABUNDANCE + PSEUDOCOUNT
 Significant difference in abundance was found for unclassified genera "Family_Enterobacteriaceae" above. Here we investigate and plot all genera present on day 8 in the family "Enterobacteriaceae".
 ``` {r eval=TRUE, echo=TRUE}
 # Collected figures for Families showing significant differences
 params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus"
-# MTRL <- "Feces"
-DAY <- "d21"
-FEED <- "B"
-SUBNAME <- "Feces_d21"
+LVLS <- c("Genus","Family")
+SUBNAME <- "Feces"
 PDI <- "feed_treat"
 TX <- "Enterobacteriaceae" 
-#c("Erysipelotrichaceae","Enterobacteriaceae")
 
-LVL <- "Genus"
 # Create sub-folder
 if (!file.exists(paste0("plots/differential_abundance/",SUBNAME))) dir.create(file.path(getwd(), paste0("plots/differential_abundance/",SUBNAME)))
+
 # Load agglomorated subset
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
-# Filter samples based on variables given
-#phy.ge <- subset_samples(phy.ge, material == MTRL & day %in% DAY)
-# Filter data
-filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Run tha selected analysis TTA
-filt.DA <- DA.tta(filt, predictor = PDI)
+for (LVL in LVLS) {
+  # Filter data
+  if (LVL == "Genus") {
+    filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
+  } else if (LVL == "Family") {
+    filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
+  }
 
-# Create a subset of the samples
-filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
-filt.t <- subset_taxa(filt.ra, Family == TX)
-
-# Melt the data
-t.melt <- psmelt(filt.t)
-
-# Create pseudocounts
-pseudocount <- min(t.melt$Abundance[t.melt$Abundance != 0])
-
-# Sort samples to phylogenetic levels (alphabetically)
-t.sorted <- t.melt %>% select(Phylum:Genus) %>% arrange(Phylum, Class, Order, Family, Genus)
-genus.sorted <- as.character(unique(t.sorted$Genus))
-t.melt$genus_new <- factor(t.melt$Genus, levels = genus.sorted)
-
-levels(t.melt$genus_new) %>% head
-# Plot data and save as output formats
-p <- ggplot(t.melt, aes(Genus, Abundance+pseudocount, fill = fct_rev(feed_treat))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_fill_manual(values = params$COL1, breaks = c("A_CTRL","A_PFOS","B_CTRL","B_PFOS"), labels = c("No fibre","No fibre + PFOS","Fibre","Fibre + PFOS")) + facet_grid(Family ~ . , scales = "free_y", space = "free") + theme_bw() + labs(fill = "Treatment")
-p
-
-suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/diffplot_",SUBNAME,"_",PDI,"_",LVL,"_",TX,".pdf"), p, device = "pdf", units = "mm", width = 200, height = 80, dpi = 300))
-suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/diffplot_",SUBNAME,"_",PDI,"_",LVL,"_",TX,".png"), p, device = "png", units = "mm", width = 200, height = 80, dpi = 300))
+  # Run tha selected analysis Wilcoxon
+  filt.DA <- DA.wil(filt, predictor = "feed")
   
+  # Create a subset of the samples
+  filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
+  filt.t <- subset_taxa(filt.ra, Family == TX)
+  
+  # Melt the data
+  t.melt <- psmelt(filt.t)
+  
+  # Create pseudocounts
+  pseudocount <- min(t.melt$Abundance[t.melt$Abundance != 0])
+  
+  # Sort samples to phylogenetic levels (alphabetically)
+  if (LVL == "Genus") {
+    t.sorted <- t.melt %>% select(Phylum:Genus) %>% arrange(Phylum, Class, Order, Family, Genus)
+    genus.sorted <- as.character(unique(t.sorted$Genus))
+    t.melt$genus_new <- factor(t.melt$Genus, levels = genus.sorted)
+    
+    levels(t.melt$genus_new) %>% head
+  } else if (LVL == "Family") {
+    t.sorted <- t.melt %>% select(Phylum:Family) %>% arrange(Phylum, Class, Order, Family)
+    fam.sorted <- as.character(unique(t.sorted$Family))
+    t.melt$fam_new <- factor(t.melt$Family, levels = fam.sorted)
+    
+    levels(t.melt$genus_new) %>% head
+  }
+
+  # Statistics
+  stat.in <- t.melt %>%
+    group_by(.data[[LVL]], feed, day) %>%
+    wilcox_test(as.formula("Abundance ~ feed_treat")) %>%
+    adjust_pvalue(method = "BH") %>%
+    add_significance("p.adj") %>% 
+    add_xy_position(x = "feed", dodge = 0.8) %>%
+    p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+  stat.in$y.position <- log10(stat.in$y.position)
+  stat.in
+  
+  stat.out <- t.melt %>%
+    group_by(.data[[LVL]], day) %>%
+    wilcox_test(as.formula("Abundance ~ feed")) %>%
+    adjust_pvalue(method = "BH") %>%
+    add_significance("p.adj") %>% 
+    add_xy_position(x = "feed", dodge = 0.8) %>%
+    p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+  stat.out$y.position <- log10(stat.out$y.position)
+  stat.out
+  
+  # Plot data and save as output formats
+  p <- ggplot(t.melt, aes(feed, Abundance+pseudocount)) +
+    geom_boxplot(aes(fill = feed_treat), color = "black") +
+    scale_y_log10(name = "Abundance+pseudocount (log10)", expand = expansion(mult = c(0, 0.075)), labels =function(x) paste0(x, "%")) +
+    scale_fill_manual(name = "Group", values = params$COL1,
+                      breaks = c("HF_CTRL","HF_PFOS","LF_CTRL","LF_PFOS"),
+                      labels = c("HF-CTRL","HF-PFOS","LF-CTRL","LF-PFOS")) +
+    facet_grid(.data[[LVL]] ~ day, space = "free", 
+               labeller = labeller(day = c("d0" = "Day 0","d08" = "Day 8","d12" = "Day 12","d16" = "Day 16","d21" = "Day 21"))) +
+    theme_pubr(border = TRUE) +
+    guides(color = "none") +
+    theme(axis.title.x = element_blank())
+  p
+  
+  if (SUBNAME == "Feces") {
+      if (LVL == "Genus") {
+        p.stat <- p + stat_pvalue_manual(stat.in, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, color = "red") +
+    stat_pvalue_manual(stat.out, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, y.position = c(1.1,1.4,1.2,1.3,1.3,0.01,0.01))
+      } else {
+        p.stat <- p + stat_pvalue_manual(stat.in, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, color = "red") +
+    stat_pvalue_manual(stat.out, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE)
+      }
+  } else if (SUBNAME %in% c("Ileum","Cecum")) {
+    p.stat <- p + #stat_pvalue_manual(stat.in, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, color = "red") +
+    stat_pvalue_manual(stat.out, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE)
+  }
+  print(p.stat)
+  
+  suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/diffplot_",SUBNAME,"_",LVL,"_",TX,".pdf"), p.stat, device = "pdf", units = "mm", width = 200, height = 100, dpi = 300))
+  suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/diffplot_",SUBNAME,"_",LVL,"_",TX,".png"), p.stat, device = "png", units = "mm", width = 200, height = 100, dpi = 300))
+  
+  save(stat.in, stat.out, p.stat, file = paste0("plots/differential_abundance/",SUBNAME,"/plot_stat_",SUBNAME,"_",LVL,".Rdata"))
+}
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 
 ```
+
+## CORRELATIONAL ANALYSIS
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
+params <- readRDS("R_objects/comp_params.RDS")
+
+#Set parameters
+PDI <- "samplePFOS_ug"
+SUBNAMES <- c("Feces","Cecum") #,"Ileum","Ileum_HF","Ileum_LF","Cecum","Cecum_HF","Cecum_LF"
+TX <- "Enterobacteriaceae" 
+
+
+  for (SUBNAME in SUBNAMES) {
+        # Create sub-folder
+    if (!file.exists(paste0("plots/differential_abundance/",SUBNAME))) dir.create(file.path(getwd(), paste0("plots/differential_abundance/",SUBNAME)))
+    
+    # Load data
+    load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
+    
+    #Subset and specify level
+    LVL <- "Genus"
+      phy.ge <- subset_samples(phy.ge, treatment == "PFOS" & day != "d0")
+      phy.used <- phy.ge
+      F.LVL <- "Genus"
+
+    # Subset taxa
+    phy.used <- subset_taxa(phy.used, Family == TX)
+
+    # Filter data
+    #filt <- preDA(data = phy.used, min.reads = 1, min.samples = 4)
+    
+    filt <- transform_sample_counts(phy.used, function(x) x/sum(x))
+    
+    # Run spearman selected analysis
+    filt.DA <- DA.spe(filt, predictor = PDI, exact = FALSE)
+    
+    # Evaluate the plot and summary table
+    table(filt.DA$pval.adj < 0.05)
+
+      # Create a subset of the samples
+      filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
+      DA.sig <- prune_taxa(filt.DA$Feature, x = filt.ra)
+      
+      # melt the data
+      DAm <- psmelt(DA.sig)
+      
+      # Add pseudo count
+      pseudocount <- min(filt.DA$Abundance[filt.DA$Abundance != 0])
+      
+      # Create plot
+      p.cor <- ggplot(DAm, aes(x = .data[[PDI]], y = Abundance, color = feed)) + 
+        geom_jitter(aes(alpha = day)) + 
+        geom_smooth(aes(color = feed), method=lm) + 
+        geom_line(aes(color = rat_name)) +
+        facet_grid("Genus ~ feed", scales = "free") + 
+        scale_y_log10(name = "Abundance (log10)") +
+        scale_x_continuous("PFOS µg/g in sample") + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
+        theme_pubr(border = TRUE) +
+        scale_color_manual(name = "Feed", values = params$COLFEED)
+      p.cor
+      print(p.cor)
+      # Save output
+      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/",TX,"_correlation_",SUBNAME,"_",PDI,"_",LVL,".pdf"), p.cor, device = "pdf", units = "mm", width = 150, height = 110, dpi = 300))
+      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/",TX,"_correlation_",SUBNAME,"_",PDI,"_",LVL,".png"), p.cor, device = "png", units = "mm", width = 150, height = 110, dpi = 300))
+
+}
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+```
+
+#CORRELATIONAL ANALYSIS TO QUANTITATIVE PFOS (Feces)
+Also run one with day as PDI and split by treatment (CTRL-PFOS) to tell if there are timeline differences.
+Note that this following analysis should be run with pval.adj, and not pval.
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
+params <- readRDS("R_objects/comp_params.RDS")
+
+#Set parameters
+LVLS <- c("Genus","Family","Order","Class")
+PDI <- "samplePFOS_ug"#"serumPFOS_ug"
+SUBNAMES <- c("Feces","Feces_HF","Feces_LF","Feces_d08","Feces_d12","Feces_d16","Feces_d21") #,"Ileum","Ileum_HF","Ileum_LF","Cecum","Cecum_HF","Cecum_LF"
+
+for (LVL in LVLS) {
+  for (SUBNAME in SUBNAMES) {
+        # Create sub-folder
+    if (!file.exists(paste0("plots/differential_abundance/",SUBNAME))) dir.create(file.path(getwd(), paste0("plots/differential_abundance/",SUBNAME)))
+    
+    # Load data
+    load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
+    
+    #Subset and specify level
+    if (LVL == "Genus") {
+      phy.ge <- subset_samples(phy.ge, treatment == "PFOS" & day != "d0")
+      phy.used <- phy.ge
+      F.LVL <- "Family"
+    } else if (LVL == "Family") {
+      phy.fa <- subset_samples(phy.fa, treatment == "PFOS" & day != "d0")
+      phy.used <- phy.fa
+      F.LVL <- "Family"
+    } else if (LVL == "Order") {
+      phy.or <- subset_samples(phy.or, treatment == "PFOS" & day != "d0")
+      phy.used <- phy.or
+      F.LVL <- "Order"
+    } else if (LVL == "Class") {
+      phy.cl <- subset_samples(phy.cl, treatment == "PFOS" & day != "d0")
+      phy.used <- phy.cl
+      F.LVL <- "Class"
+    }
+    
+    if (grepl("Feces_d",SUBNAME) == TRUE) {
+      phy.hf <- subset_samples(phy.used, feed == "HF")
+      phy.lf <- subset_samples(phy.used, feed == "LF")
+      FEEDS <- c("HF","LF")
+      
+      for (FEED in FEEDS) {
+        
+        if (FEED == "HF") {
+          phy.used <- phy.hf
+        } else if (FEED == "LF") {
+          phy.used <- phy.lf
+        }
+        
+        # Filter data
+        filt <- preDA(data = phy.used, min.reads = 20, min.samples = 4)
+        filt <- transform_sample_counts(filt, function(x) x/sum(x))
+        
+        # Run spearman selected analysis
+        filt.DA <- DA.spe(filt, predictor = PDI, exact = FALSE)
+        
+        # Evaluate the plot and summary table
+        table(filt.DA$pval.adj < 0.05)
+        filt.p5 <- filt.DA[filt.DA$pval.adj < 0.05,]
+        filt.p5 <- filter(filt.p5, rowSums(is.na(filt.p5)) != ncol(filt.p5)) 
+        filt.p5
+        
+        if (any(filt.p5$pval.adj > 0)) {
+          # Create a subset of the samples
+          filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
+          DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05], x = filt.ra)
+          
+          # melt the data
+          DAm <- psmelt(DA.sig)
+          
+          # Add pseudo count
+          pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
+          
+          # Create plot
+          p.cor <- ggplot(DAm, aes(x = .data[[PDI]], y = Abundance+pseudocount, color = .data[[LVL]])) + 
+            geom_jitter() + 
+            geom_smooth(method=lm) + 
+            facet_wrap(F.LVL, scales = "free_y") + 
+            scale_y_log10() +
+            scale_x_continuous() + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
+            theme_pubr()
+          p.cor
+          print(p.cor)
+          # Save output
+          suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_",FEED,".pdf"), p.cor, device = "pdf", units = "mm", width = 400, height = 300, dpi = 300))
+          suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_",FEED,".png"), p.cor, device = "png", units = "mm", width = 400, height = 300, dpi = 300))
+    
+          if (any(filt.p5$rho > 0)) {
+            DA.sigpos <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05 & filt.DA$rho > 0], x = filt.ra)
+            
+            # melt the data
+            DAmpos <- psmelt(DA.sigpos)
+            
+            # Add pseudo count
+            pseudocount <- min(DAmpos$Abundance[DAmpos$Abundance != 0])
+            
+            # Create positive corr plots
+            p.pos <- ggplot(DAmpos, aes(x = .data[[PDI]], y = Abundance+pseudocount, color = .data[[LVL]])) + 
+              geom_jitter() + 
+              geom_smooth(method=lm) + 
+              facet_wrap(F.LVL, scales = "free_y") + 
+              scale_y_log10() +
+              scale_x_continuous() + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
+              theme_pubr()
+            p.pos
+            
+            # Print output
+            print(p.pos)
+            
+            # Save output
+            suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_",FEED,"_positive.pdf"), p.pos, device = "pdf", units = "mm", width = 400, height = 300, dpi = 300))
+            suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_",FEED,"_positive.png"), p.pos, device = "png", units = "mm", width = 400, height = 300, dpi = 300))
+          } else {print(paste0("No positive correlations for ",LVL," in ",SUBNAME,"."))}
+          
+          if (any(filt.p5$rho < 0)) {
+            DA.signeg <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05 & filt.DA$rho < 0], x = filt.ra)
+            
+            # melt the data
+            DAmneg <- psmelt(DA.signeg)
+            
+            # Add pseudo count
+            pseudocount <- min(DAmneg$Abundance[DAmneg$Abundance != 0])
+            
+            # Create negative corr plots
+            p.neg <- ggplot(DAmneg, aes(x = .data[[PDI]], y = Abundance+pseudocount, color = .data[[LVL]])) + 
+              geom_jitter() + 
+              geom_smooth(method=lm) + 
+              facet_wrap(F.LVL, scales = "free_y") + 
+              scale_y_log10() +
+              scale_x_continuous() + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
+              theme_pubr()
+            p.neg
+            
+            # Print output
+            print(p.neg)
+            
+            # Save output
+            suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_",FEED,"_negative.pdf"), p.neg, device = "pdf", units = "mm", width = 400, height = 300, dpi = 300))
+            suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_",FEED,"_negative.png"), p.neg, device = "png", units = "mm", width = 400, height = 300, dpi = 300))
+            
+            } else {print(paste0("No negative correlations for ",LVL," in ",SUBNAME,"."))}
+          }
+        }
+#############################
+      
+    } else {
+      
+    # Filter data
+    filt <- preDA(data = phy.used, min.reads = 20, min.samples = 4)
+    filt <- transform_sample_counts(filt, function(x) x/sum(x))
+    
+    # Run spearman selected analysis
+    filt.DA <- DA.spe(filt, predictor = PDI, exact = FALSE)
+    
+    # Evaluate the plot and summary table
+    table(filt.DA$pval.adj < 0.05)
+    filt.p5 <- filt.DA[filt.DA$pval.adj < 0.05,]
+    filt.p5 <- filter(filt.p5, rowSums(is.na(filt.p5)) != ncol(filt.p5)) 
+    filt.p5
+    
+    if (any(filt.p5$pval.adj > 0)) {
+      # Create a subset of the samples
+      filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
+      DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05], x = filt.ra)
+      
+      # melt the data
+      DAm <- psmelt(DA.sig)
+      
+      # Add pseudo count
+      pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
+      
+      # Create plot
+      p.cor <- ggplot(DAm, aes(x = .data[[PDI]], y = Abundance+pseudocount, color = .data[[LVL]])) + 
+        geom_jitter() + 
+        geom_smooth(method=lm) + 
+        facet_wrap(F.LVL, scales = "free_y") + 
+        scale_y_log10() +
+        scale_x_continuous() + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
+        theme_pubr()
+      p.cor
+      print(p.cor)
+      # Save output
+      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,".pdf"), p.cor, device = "pdf", units = "mm", width = 400, height = 300, dpi = 300))
+      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,".png"), p.cor, device = "png", units = "mm", width = 400, height = 300, dpi = 300))
+
+      if (any(filt.p5$rho > 0)) {
+      DA.sigpos <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05 & filt.DA$rho > 0], x = filt.ra)
+      
+      # melt the data
+      DAmpos <- psmelt(DA.sigpos)
+      
+      # Add pseudo count
+      pseudocount <- min(DAmpos$Abundance[DAmpos$Abundance != 0])
+      
+      # Create positive corr plots
+      p.pos <- ggplot(DAmpos, aes(x = .data[[PDI]], y = Abundance+pseudocount, color = .data[[LVL]])) + 
+        geom_jitter() + 
+        geom_smooth(method=lm) + 
+        facet_wrap(F.LVL, scales = "free_y") + 
+        scale_y_log10() +
+        scale_x_continuous() + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
+        theme_pubr()
+      p.pos
+      
+      # Print output
+      print(p.pos)
+      
+      # Save output
+      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_positive.pdf"), p.pos, device = "pdf", units = "mm", width = 400, height = 300, dpi = 300))
+      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_positive.png"), p.pos, device = "png", units = "mm", width = 400, height = 300, dpi = 300))
+      } else {print(paste0("No positive correlations for ",LVL," in ",SUBNAME,"."))}
+      
+      if (any(filt.p5$rho < 0)) {
+      DA.signeg <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05 & filt.DA$rho < 0], x = filt.ra)
+      
+      # melt the data
+      DAmneg <- psmelt(DA.signeg)
+      
+      # Add pseudo count
+      pseudocount <- min(DAmneg$Abundance[DAmneg$Abundance != 0])
+      
+      # Create negative corr plots
+      p.neg <- ggplot(DAmneg, aes(x = .data[[PDI]], y = Abundance+pseudocount, color = .data[[LVL]])) + 
+        geom_jitter() + 
+        geom_smooth(method=lm) + 
+        facet_wrap(F.LVL, scales = "free_y") + 
+        scale_y_log10() +
+        scale_x_continuous() + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
+        theme_pubr()
+      p.neg
+      
+      # Print output
+      print(p.neg)
+      
+      # Save output
+      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_negative.pdf"), p.neg, device = "pdf", units = "mm", width = 400, height = 300, dpi = 300))
+      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_negative.png"), p.neg, device = "png", units = "mm", width = 400, height = 300, dpi = 300))
+      } else {print(paste0("No negative correlations for ",LVL," in ",SUBNAME,"."))}
+      
+    } else {
+      print(paste0("No signficance found in filt.p5 in ",PDI," for ",SUBNAME," at ",LVL,"."))
+    }
+    }
+  }
+}
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+```
+#CORRELATIONAL ANALYSIS TO DAY (Feces)
+Also run one with day as PDI and split by treatment (CTRL-PFOS) to tell if there are timeline differences.
+Note that this following analysis should be run with pval.adj, and not pval.
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
+params <- readRDS("R_objects/comp_params.RDS")
+
+#Set parameters
+LVLS <- c("Genus","Family","Order","Class")
+PDI <- "day_no"
+SUBNAMES <- c("Feces","Feces_","Ileum","Cecum") #,"Ileum","Ileum_HF","Ileum_LF","Cecum","Cecum_HF","Cecum_LF"
+SUBNAME <- "Feces"
+for (LVL in LVLS) {
+  for (SUBNAME in SUBNAMES) {
+        # Create sub-folder
+    if (!file.exists(paste0("plots/differential_abundance/",SUBNAME))) dir.create(file.path(getwd(), paste0("plots/differential_abundance/",SUBNAME)))
+    
+    # Load data
+    load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
+    
+    #Subset and specify level
+    if (LVL == "Genus") {
+      # phy.ge <- subset_samples(phy.ge, treatment == "PFOS" & day != "d0")
+      phy.used <- phy.ge
+      F.LVL <- "Genus"
+    } else if (LVL == "Family") {
+      # phy.fa <- subset_samples(phy.fa, treatment == "PFOS" & day != "d0")
+      phy.used <- phy.fa
+      F.LVL <- "Family"
+    } else if (LVL == "Order") {
+      # phy.or <- subset_samples(phy.or, treatment == "PFOS" & day != "d0")
+      phy.used <- phy.or
+      F.LVL <- "Order"
+    } else if (LVL == "Class") {
+      # phy.cl <- subset_samples(phy.cl, treatment == "PFOS" & day != "d0")
+      phy.used <- phy.cl
+      F.LVL <- "Class"
+    }
+      
+    # Filter data
+    filt <- preDA(data = phy.used, min.reads = 20, min.samples = 4)
+    filt <- transform_sample_counts(filt, function(x) x/sum(x))
+    
+    # Run spearman selected analysis
+    filt.DA <- DA.spe(filt, predictor = PDI, exact = FALSE)
+    
+    # Evaluate the plot and summary table
+    table(filt.DA$pval.adj < 0.05)
+    filt.p5 <- filt.DA[filt.DA$pval.adj < 0.05,]
+    filt.p5 <- filter(filt.p5, rowSums(is.na(filt.p5)) != ncol(filt.p5)) 
+    filt.p5
+    
+    if (any(filt.p5$pval.adj > 0)) {
+      # Create a subset of the samples
+      filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
+      DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05], x = filt.ra)
+      
+      # melt the data
+      DAm <- psmelt(DA.sig)
+      
+      # Add pseudo count
+      pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
+      
+      # Create plot
+      p.cor <- ggplot(DAm, aes(x = .data[[PDI]], y = Abundance+pseudocount, color = feed_treat)) + 
+        geom_jitter() +
+        geom_smooth(method=lm) +
+        facet_grid(as.formula(paste0("treatment ~",F.LVL)), scales = "free_y", switch = "y") + 
+        scale_y_log10() +
+        scale_x_continuous(name = "Day", breaks = c(0,8,12,16,21)) + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
+        theme_pubr(border = TRUE) +
+        scale_color_manual(values = params$COL1) +
+        theme(strip.text.x.top = element_text(angle = 90))
+      p.cor
+      print(p.cor)
+      
+      # Save output
+      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,".pdf"), p.cor, device = "pdf", units = "mm", width = 800, height = 300, dpi = 300))
+      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,".png"), p.cor, device = "png", units = "mm", width = 800, height = 300, dpi = 300))
+
+    } else {
+      print(paste0("No signficance found in filt.p5 in ",PDI," for ",SUBNAME," at ",LVL,"."))
+    }
+  }
+}
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+```
+
 
 
 ## ILEUM
@@ -8318,7 +8992,7 @@ levels(t.melt$family_new) %>% head
   # p.done
   done <- plot_grid(p.fa, p.ge, ncol = 1, align = "v", axis = "l", rel_heights = c(1,5))
   done
-  # p.all <- ggarrange(p.fa, p.ge, labels = c("A","B"), ncol = 1, nrow = 2, common.legend = TRUE)
+  # p.all <- ggarrange(p.fa, p.ge, labels = c("LF","HF"), ncol = 1, nrow = 2, common.legend = TRUE)
   # p.all
   
   suppressMessages(ggsave(paste0("plots/dabu/",SUBNAME,"/diffplotarrange_done_",SUBNAME,"_",PDI,".pdf"), done, device = "pdf", units = "mm", width = 300, height = 300, dpi = 300))
@@ -8397,7 +9071,7 @@ for (TX in phs) {
   p <- ggplot(t.melt, aes(Species, Abundance+pseudocount, color = fct_rev(treatment))) + geom_boxplot() + scale_y_log10() + coord_flip() + scale_color_manual(values = params$COL) #+ theme(axis.text.y = element_text(angle = 90))
   p.sp <-  p + ggtitle(paste0("Abundance of ",LVL," taxa"))
   
-  p.all <- ggarrange(p.fa, p.ge, p.sp, labels = c("A","B","C"), ncol = 3, nrow = 1, common.legend = TRUE)
+  p.all <- ggarrange(p.fa, p.ge, p.sp, labels = c("LF","HF","C"), ncol = 3, nrow = 1, common.legend = TRUE)
   p.allT <- annotate_figure(p.all, top = text_grob(paste0("Significant differential abundance for ",TX," in ", MTRL," ",DAY)))
   
   suppressMessages(ggsave(paste0("plots/dabu/",SUBNAME,"/diffplotphylum_",SUBNAME,"_",PDI,"_",TX,".pdf"), p.allT, device = "pdf", units = "mm", width = 350, height = 200, dpi = 300))

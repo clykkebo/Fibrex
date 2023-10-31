@@ -1,6 +1,6 @@
 ---
 title: "Fibrex Import and QC"
-author: "caly"
+author: "Claus Lykkebo"
 date: "`r Sys.Date()`"
 output:
   rmdformats::readthedown:
@@ -24,23 +24,37 @@ params:
 
 # INFO
 
-This document contains the commands necessary to perform initial import and QC of the output from the DF_GMH_PIPELINE. Here it has been fitted for data from Fibrex (project B-02-22). The project data contains 16S V2 amplicon sequencing from feces samples from 6 different days and cecum and ileum samples from two dissections originating from 48 rats. There are feces samples from all rats from day 0 and 8, while remaining days only contain from 24, as half the rats were dissected on day 8. Cecum and ileum samples were accordingly collected in at two dissection on day 8 and 21. Sampling on day 20 was run as a test of effect of carmine treatment for transit time.
+This document contains the commands necessary to perform initial import and QC of the output from the DF_GMH_PIPELINE. Here it has been fitted for data from Fibrex (project B-02-22). The project data loaded here contains 16S V2 amplicon sequencing from feces samples from 6 different days and cecum and ileum samples from two dissections originating from 48 rats. There are feces samples from all rats from day 0 and 8, while remaining days only contain from 24, as half the rats were dissected on day 8. Cecum and ileum samples were accordingly collected in at two dissection on day 8 and 21. Sampling on day 20 was run as a test of effect of carmine treatment for transit time.
 
 Metadata added contains results from:
 
-- Carmine treatment (0 = no and 1 = yes) for different days.
+- Carmine treatment (0 = *no* and 1 = *yes*) for different days.
 
-- Body weight per sampling day (day 0, 8, 12, 16, 20 and 21), and cecum and liver weight per dissection day (day 8 and 21).
+- Weight data:
+  + Body weight per sampling day (day *0*, *8*, *12*, *16*, *20* and *21*)
+  + Cecum and liver weight per dissection day (day *8* and *21*).
 
-- PFOS quantification of:
-  + systemic concentrations in blood serum from day 8, 16 and 21, liver and brain tissues (day 8 and 21).
-  + wash-out concentrations in urine from day 8, 16 and 21, feces from day 8, 12, 16 and 21, and cecum (day 8 and 21).
+- Total PFOS quantification of:
+  + *systemic concentrations* in blood serum from day 8, 16 and 21, liver and brain tissues (day 8 and 21).
+  + *wash-out concentrations* in urine from day 8, 16 and 21, feces from day 8, 12, 16 and 21, and cecum (day 8 and 21).
 
 - Short-chain fatty acids quantification of 10 compounds in cecum given in mM per dissection day (day 8 and 21).
 
 - pH-values from upper and lower jejunum, ileum and cecum in separate columns: pH_je_up, pH_je_low, pH_il, pH_ce per day. Also one pH column "pH" with values fitting each sample type (feces are assigned cecum values).
 
 - Transit time for each day (day 0 = measurement from day 0; day 8 = measurement from day 7; day 21 = measurement from day 20)
+
+Division of groups are based on **Sample identifiers**:
+  - "rat_name" is corrected rat names due to non-continuous numbering for rat_org and dissection days for rat_org *R41-R42* (day 21) and *R43-R44* (day 8). This column should be used for rat identification. All following information is following rat_name nomenclature.
+  - "cage" number: *01-24*
+  - "feed" given during the study: 
+    + *LF* = low fibre (AIN-93G, D19090404 with non-lactococci casein, Research Diets)
+    + *HF* = high fibre (Soy-free Altromin 1314, Altromin)
+  - "treatment" for oral gavage given:
+    + *CTRL* for control groups
+    + *PFOS* for PFOS exposed groups
+  - "day" for day of sampling: *d8* and *d21*
+  - combined identifiers with values from above separated by "_": "feedtreat", "feedtreatday"
 
 
 ```{r setup, eval=TRUE, echo=TRUE, message=FALSE,warning = FALSE}

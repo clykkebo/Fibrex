@@ -1,0 +1,326 @@
+---
+title: "<PROJECT> Test variables"
+author: "<YOUR NAME>"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::readthedown:
+    toc_depth: 4
+    collapsed: false
+    code_folding: hide
+    number_sections: false
+knit: (function(inputFile, encoding) { 
+    rmarkdown::render(
+        inputFile, encoding = encoding,
+        output_dir = file.path(dirname(inputFile),"output"),
+        output_file = paste0("<PROJECT>_", Sys.Date(), "_test_variables.html"))
+        })
+---
+
+# INFO {.tabset .tabset-fade .tabset-pills}
+
+## BACKGROUND
+
+This template is build to use the output from **GMH_import** as input. It consists of four sections; **Description** of your project and variables, **Import** and formatting of your data, **Section for inserting statistical test**, **Summary** of the R environment and packages used. 
+
+For each subset, variable, or combination of variables, create a new section in the TEST section, subset data as needed and insert the appropriate code from the `GMH_test_variables_code` template.
+
+To perform the correct statistical analysis youo should go through the following steps:
+
+1.  Identify the appropriate type of test for the predictor and outcome.
+
+2.  Test the data to determine the exact test to use, including whether batch effects should be considered.
+
+3.  Perform the statistical test.
+
+4.  Visualize the output in a plot.
+
+For each steps your choices will impact the interpretation of the output. This will be expanded in each section.
+
+# SETUP
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(GMHmicrobiome)
+library(ggpubr)
+library(kableExtra)
+library(phyloseq)
+library(rstatix)
+library(vegan)
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+## PROJECT
+
+PLEASE GIVE A SHORT PROJECT SUMMARY HERE (sample origin, goal, etc.)
+
+## VARIABLES
+
+PLEASE EXPLAIN THE USED VARIABLES HERE (subject, group, and time)
+
+# DATA
+
+To ensure the data is in the right format, this section will load, view, clean, and save the data for use throughout this template.
+
+## LOAD
+
+If continuing directly from **1_Import_QC.RData** data can be extracted directly from the phyloseq object of choice (first part of the code block) or imported from any external file using the import function (second part of the code block).
+
+> DELETE the option that you do not use.
+
+```{r load, eval=TRUE}
+
+##### FIRST PART
+# Load phyloseq metadata
+load("R_objects/Phyloseq_harsh.Rdata")
+
+# Extract sample data from phyloseq object
+dat <- as_tibble(sample_data(phy))
+
+##### SECOND PART
+# Load data from table using readr (File > Import Dataset > From Text (readr)...) and paste the code here
+dat <- read_delim("...", delim = "\t", escape_double = FALSE, trim_ws = TRUE)
+
+```
+
+## LOOK
+
+It is important to understand the structure and format of your data.
+
+```{r look, eval=TRUE}
+
+# Take a glimpse
+glimpse(dat)
+
+# Make a explorative summary 
+skimr::skim(dat)
+
+```
+
+## CLEAN
+
+If there are data that is poorly structured or wrongly formatted, it will be sorted here.
+
+This is the general principles to follow:
+
+-   Remove variables
+
+    -   With one unique value (e.g. sample_type, is_neg)
+
+    -   With duplicated information (e.g. keep one of sampleID and ID)
+
+    -   With irrelevant data (e.g. barcode)
+
+-   Change format
+
+    -   Numeric values as numbers `<dbl>` or integers `<int>.`
+
+    -   Unique strings as characters `<chr>`
+
+    -   Categorical data as factors `<fct>` (unordered, e.g. treatment groups)
+
+    -   Ordered categorical data as ordered `<ord>` (e.g. size: "small" \< "medium" \< "large")
+
+```{r clean, eval=TRUE}
+
+# confirm identical variables
+with(dat, table(Seq_run == run))
+
+# Confirm variables with same information
+with(dat, table(gr, treatment))
+
+
+# Remove
+out.var <- c("type", "sample_type", "is.neg", "sampleID","ID", "barcode","ASVs","primer", "random","run","mtrl_day","grday","typetreat","typegrday","gr", "Project","depth")
+
+dat <- dat %>% select(-one_of(out.var))
+
+
+# Create vectors of variables that should change type
+fac.vars <- c("Seq_run","rat_name", "material", "cage")
+num.vars <- c("rat_no")
+ord.vars <- c("day")
+
+# Change variables
+dat <- dat %>% mutate_at(.vars = fac.vars, factor)
+dat <- dat %>% mutate_at(.vars = num.vars, as.numeric)
+
+# For ordered factors I suggest to do them individually
+dat <- dat %>% mutate(day = factor(day, levels = c("d0","d2","d4","d8"),ordered = TRUE))
+
+# Look at cleaned data
+skimr::skim(dat)
+
+```
+
+## SAVE
+
+The cleaned data is here saved in one file that can be loaded when necessary in this template. If you need subsets for the analysis I suggest to create and save those here as well
+
+```{r save, eval=TRUE}
+
+# Save cleaned data
+save(dat, file = "R_objects/stat_test_data.RData")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE)[ls(all.names = TRUE) != "params"])
+invisible(gc())
+
+```
+
+# TEST INDEPENDENCE
+
+It is important to confirm if our variablse are independent of each other. If any are significantly correlated this will affect how the variables should be used in following tests. For example, Observed richness and FaithPD are generally correlated, so we should not include both as outcome in a manova test or maybe only one should be tested.
+It might also be considered to perform an ANCOVA test where we correct for the influence of the correlated variable.
+
+## CATEGORICAL VARIABLES
+
+Categorical variables should be compared using **Chi squared test of independence**.
+
+```{r assumption-independene-categorical, eval = TRUE}
+
+# load data 
+load("R_objects/stat_test_data.RData")
+
+# This converts all character columns to factor (if only specific columns should be converted replace "where(is_character)" with "c(<col1>,<col2>,...)"
+dat <- dat %>% mutate(across(where(is_character), as_factor))
+
+
+# Create vector of categorical variables with more than two categories and less than half of the number of samples.
+cat_var <- dat %>% 
+  select_if(is.factor) %>% 
+  select(where(~n_distinct(.) > 1)) %>% 
+  select(where(~n_distinct(.) < (nrow(dat)/2))) %>%
+  colnames()
+
+length(cat_var) # If less than 2 variables the following code should not be run
+
+# Test the variables pairwise 
+cat_var %>% 
+  combn(2) %>% 
+  t() %>% 
+  as_tibble() %>% 
+  rowwise %>% 
+  mutate(chisq_test = list(
+    table(dat[[V1]], dat[[V2]]) %>% chisq.test()
+    ),
+    chisq_pval = chisq_test$p.value
+    )
+
+```
+
+## QUANTITATIVE VARIABLES
+
+Normally, for a correlation test we would test if the variables follows a normal distribution, and then run a parametric (**Pearson's r**) or nonparametric (**Spearman's r**) test. As this is just a quick initial comparison we we will run a Spearman's test without first testing the normality of the data.
+
+```{r assumption-independence-numerical, eval = TRUE, error=TRUE}
+# Prep data
+
+phy.
+
+# Plot all variables against each other
+pairs(dat[,CON.VARS[1:25]], pch = 19,  cex = 0.5,
+      lower.panel=NULL)
+
+# Run Spearman test
+corrmat <- cor(x = dat.SCFA[,1:3], y = dat.SCFA[4:7], method = "spearman", use = "pairwise.complete.obs")
+
+# Create heatmap
+corrmat_rounded <- round(corrmat, 2)
+
+melted_corrmat_rounded <- tibble(Var1 = rep(row.names(corrmat_rounded), length(colnames(corrmat_rounded))),
+                                 Var2 = rep(colnames(corrmat_rounded), each = length(rownames(corrmat_rounded))),
+                                 dist = as.numeric(matrix(corrmat_rounded)))
+
+ggplot(melted_corrmat_rounded, aes(x = Var1, y = Var2, fill = dist)) + 
+  labs(title = "Correlation between continous variables") + 
+  geom_tile(color = "white") + 
+  scale_fill_gradient2(low = "blue", mid = "white", 
+                       high = "red", midpoint = 0, limit = c(-1,1), 
+                       space = "Lab", name = "Correlation coefficient") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, size = 12, 
+                                   hjust = 1, vjust = 1), 
+        axis.text.y = element_text(size = 12, hjust = 1, vjust = 0.5),
+        axis.title.x = element_blank(), axis.title.y = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks = element_blank()) + 
+  geom_text(aes(x = Var1, y = Var2, label = dist), 
+            color = "black", size = 4) + 
+  coord_fixed()
+
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE)[ls(all.names = TRUE) != "params"])
+invisible(gc())
+
+```
+
+
+# <SUBSET> - <PREDICTOR> - <OUTCOME>
+
+For each combination of subset, predictor, and outcome please create a new section so that all performed tests are preserved in this script. When preparing the script for publication all unused tests should be moved to a section with supplementary tests in the end of the Rmarkdown.
+
+> REMEMBER THAT ALL CODE CHUNKS MUST BE UNNAMED OR HAVE UNIQUE NAMES
+
+```{r, eval=TRUE}
+# load data 
+load("R_objects/stat_test_data.RData")
+
+# Create subset
+dat.clean <- dat %>% filter(material == "Feces", day %in% c("d0", "d8")) %>% select_if(~ !any(is.na(.)))
+
+```
+
+## PREPARE VARIABLES
+
+To prepare for the test we have to set the relevant variables
+
+> INSERT RELEVANT CODE TO SET VARIABLES
+
+## PRELIMINIARY TEST
+
+> In this section insert the relevant test of statistical assumptions (Outliers, normality of data, homogeneity of variance, and maybe potential batch effects).
+
+## PERFORM TEST
+
+> INSERT RELEVANT CODE TO PERFORM THE APPROPRIATE TEST
+
+## VISUALIZE
+
+> INSERT RELEVANT CODE TO CREATE RELEVANT PLOT
+
+#  NEXT <SUBSET> - <PREDICTOR> - <OUTCOME>
+
+
+# INFO {.tabset .tabset-fade .tabset-pills}
+
+## FINAL COMMENT
+
+This completes the fundamental statistical test of the sample variables.
+
+If not yet finished, continue with the following steps:
+
++------------------------+----------------------------+-----------------------------------------------------------------+
+| Analysis               | Template                   | Note                                                            |
++========================+============================+=================================================================+
+| Microbiome description | GMH_description            | Compositional statistics and plots                              |
++------------------------+----------------------------+-----------------------------------------------------------------+
+| Beta diversity         | GMH_beta_diveristy         | Statistical test and visualization of beta diversity            |
++------------------------+----------------------------+-----------------------------------------------------------------+
+| Differential abundance | GMH_differential_abundance | Test differential abundance of taxa against sample variables    |
++------------------------+----------------------------+-----------------------------------------------------------------+
+
+## SESSION INFO
+
+The analysis was run in the following environment:
+
+```{r packages, eval=TRUE}
+sessionInfo()
+```
