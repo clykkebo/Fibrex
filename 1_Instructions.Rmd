@@ -1,0 +1,109 @@
+---
+title: "1. Instructions"
+author: "Claus Lykkebo"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::readthedown:
+    toc_depth: 4
+    collapsed: false
+    code_folding: hide
+    number_sections: true
+knit: (function(inputFile, encoding) { 
+    rmarkdown::render(
+        inputFile, encoding = encoding,
+        output_dir = file.path(dirname(inputFile),"output"),
+        output_file = paste0("Fibrex_", Sys.Date(), "_1_Instructions.html")) 
+    })
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE)
+```
+
+
+This repository contains the code and data necessary to reproduce the complete statistical analysis for the article **"Dietary fibre intake increases excretion/depuration of perfluorooctane sulfonic acid in male Sprague-Dawley rats"** (doi: ###########). All files and folders should be copied to your local folder to ensure script compliance.
+
+# Introduction
+
+"Fibrex" (internal project number B-02-22) refers to an animal study with the scope of elucidating the effect of soluble dietary fibres on uptake and depuration of orally administered perfluorooctane sulfonic acid (PFOS) in adult male rats through investigation of:
+ -    gut microbiome diversity and composition, 
+ -    gastrointestinal abiotic factors (pH, transit time, short-chain fatty acids), and
+ -    quantitative PFOS detection in systemic and excreted samples.
+
+## Project
+
+The FIBREX project is a PFOS exposure experiment focusing on the difference in uptake and wash-out of PFOS between rats given feed with and without dietary fibers. Samples for this analysis are 16S rRNA V3 amplicons from extracted total DNA of feces and luminal samples from ileum and cecum. Fecal samples were collected before exposure start (day 0, n=48) and hereafter at day 8 (n=48), 12 (n=24), 16 (n=24), 20 (n=24) and 21 (n=24). Sampling on day 20 was run as a test of effect of carmine treatment for transit time but has been left out of analyses included in main article as no marked differences were observed between day 20 and 21. Luminal contents were collected at dissections at day 8 (n=24) and 21 (n=24). DNA was sequenced on IonTorrent GSS5 platform and raw data converted to ASVs using cutadapt (Martin 2011) and DADA2 (Callahan et al. 2016) and converted into Phyloseq elements (McMurdie and Holmes 2013). Goal of the analysis is to investigate the impact of soluble dietary fibre, PFOS exposure, and PFOS depuration on the gut microbiota.
+
+# Content
+
+Analysis covers Import and QC of sequencing data in phyloseq objects
+obtained from the
+[DF_GMH_PIPELINE](https://github.com/MSMortensen/DF_GMH_pipeline), as
+well as relative abundance, alpha-diversity, beta-diversity and
+differential abundance analyses. Demultiplexed sequence files from 
+raw Ion S5 sequencing data are available under
+[Bioproject number 950015](http://www.ncbi.nlm.nih.gov/bioproject/950015).
+These can be further processed for phyloseq analysis using the [DF_GMH_PIPELINE](https://github.com/MSMortensen/DF_GMH_pipeline).
+Lastly, data on animal and organ weights, quantitative PFOS and isomers, quantitative short-chain fatty acids, gastrointestinal transit time, and gastrointestinal pH are covered.
+
+# Steps
+
+This repository consists of the following sequential files:
+
+-   **1_Instructions.Rmd**: Explanation of data and instructions to install required packages.
+-   **2_Import.Rmd**: Import and QC of sequencing data.
+-   **3_Relative_abundance.Rmd**: Summary of the microbiome ,including relative abundances at all taxonomic levels.
+-   **4_Alpha_diversity.Rmd**: Alpha diversity, including richness (observed ASVs), eveness (Shannon) and phylogenetic diversity (FaithPD).
+-   **5_Beta_diversity.Rmd**: Beta diversity using Bray-Curtis, Jaccard and UniFrac distance matrix.
+-   **6_Differential_abundance.Rmd**: Differential abundance between treatments on Day 3, 5 and  7, and facultative anaerobe estimate.
+-   **7_Animal_data.Rmd**: Statistical analysis of collected quantitative weight, PFOS, short-chain fatty acid, gastrointestinal transit time, and gastrointestinal pH data.
+
+
+# Install packages
+
+To use the code the following packages must be installed, if they are already installed you can skip this part.
+
+## GMHmicrobiome
+
+```{r GMHmicrobiome, eval=FALSE, echo=TRUE}
+if (!requireNamespace("remotes")) install.packages("remotes")
+if (!requireNamespace("BiocManager")) install.packages("BiocManager")
+if (!requireNamespace("ggrepel")) install.packages("ggrepel")
+if (!requireNamespace("ggExtra")) install.packages("ggExtra")
+if (!requireNamespace("forcats")) install.packages("forcats")
+
+if (!requireNamespace("GMHmicrobiome")) remotes::install_github("MSMortensen/GMHmicrobiome")
+```
+
+## DAtest add-ons
+
+```{r DAtest, eval=FALSE, echo=TRUE}
+BiocManager::install(c("DESeq2","limma","edgeR","metagenomeSeq","baySeq","ALDEx2","impute","ANCOMBC"))
+
+install.packages(c("samr","pscl","statmod","mvabund","eulerr","lsmeans"))
+```
+
+## Create the necessary output folders
+Following folders should be created to accommodate downstream file creation.
+
+```{r Folders, eval=FALSE, echo=TRUE}
+# Create used folders if missing
+if (!file.exists("R_objects")) dir.create(file.path(getwd(), "R_objects"))
+if (!file.exists("plots")) dir.create(file.path(getwd(), "plots"))
+if (!file.exists("plots/adiv")) dir.create(file.path(getwd(), "plots/adiv"))
+if (!file.exists("plots/bdiv")) dir.create(file.path(getwd(), "plots/bdiv"))
+if (!file.exists("plots/differential_abundance")) dir.create(file.path(getwd(), "plots/differential_abundance"))
+if (!file.exists("plots/figures")) dir.create(file.path(getwd(), "plots/figures"))
+if (!file.exists("plots/animal_data")) dir.create(file.path(getwd(), "plots/animal_data"))
+if (!file.exists("plots/animal_data/pH")) dir.create(file.path(getwd(), "plots/animal_data/pH"))
+if (!file.exists("plots/animal_data/transit")) dir.create(file.path(getwd(), "plots/animal_data/transit"))
+if (!file.exists("plots/animal_data/pfos")) dir.create(file.path(getwd(), "plots/animal_data/pfos"))
+if (!file.exists("plots/animal_data/weight")) dir.create(file.path(getwd(), "plots/animal_data/weight"))
+if (!file.exists("plots/animal_data/scfa")) dir.create(file.path(getwd(), "plots/animal_data/scfa"))
+if (!file.exists("tables")) dir.create(file.path(getwd(), "tables"))
+if (!file.exists("output")) dir.create(file.path(getwd(), "output"))
+if (!file.exists("tables")) dir.create(file.path(getwd(), "tables"))
+if (!file.exists("scripts")) dir.create(file.path(getwd(), "scripts"))
+
+```
+

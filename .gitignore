@@ -43,4 +43,5 @@ vignettes/*.pdf
 # Output from the pipeline (remove if sharing your work)
 tables/
 scripts/
-input/
+backup_041223/
+plots/old/

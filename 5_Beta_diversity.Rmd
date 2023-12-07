@@ -1,0 +1,1249 @@
+---
+title: "5. Beta diversity"
+author: "Claus Lykkebo"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::readthedown:
+    toc_depth: 4
+    collapsed: false
+    code_folding: hide
+    number_sections: false
+knit: (function(inputFile, encoding) { 
+    rmarkdown::render(
+        inputFile, encoding = encoding,
+        output_dir = file.path(dirname(inputFile),"output"),
+        output_file = paste0("Fibrex_", Sys.Date(), "_5_Beta_diversity.html"))
+        })
+params:
+    input: "R_objects/Phyloseq.Rdata"
+    metrics: "bray|jac|unif|wuf|ait"
+    COL: !r c("LF_CTRL" = "#a5cee3","LF_PFOS" = "#1778b6","HF_CTRL" = "#b4d88a","HF_PFOS" = "#30a148")
+
+---
+
+# INFO {.tabset .tabset-fade .tabset-pills}
+
+This Rmarkdown contains the commands necessary to perform beta diversity analysis of the output from the [DF_GMH_PIPELINE](https://github.com/MSMortensen/DF_GMH_pipeline). It is expected that the data has been imported, cleaned, and saved following the script **1_Import.Rmd** prior to using this script.
+
+Beta diversity, also called "between sample diversity" is calculated as a dissimilarity distance between individual samples.
+Here we calculate metrices:
+ -    Bray-Curtis
+ -    Jaccard
+ -    UniFrac
+ -    Unweighted UniFrac
+ -    Aitchison (not used in final presentation)
+
+# SETUP
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(GMHmicrobiome)
+library(ggpubr)
+library(kableExtra)
+library(phyloseq)
+library(cowplot)
+library(ggExtra)
+library(vegan)
+library(ggrepel)
+
+# save parameters
+saveRDS(params, "R_objects/params_betadiv.RDS")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+# CALCULATE DISTANCES
+## PREPARE DATA
+
+First step is to create a clean phyloseq object (remove samples missing relevant data and/or subset by a relevant variable).
+
+Beta diversity are affected by all samples included, so if some samples are removed, this should preferably be done before the beta diversity is calculated. \> qualitative metrics are sensitive to sequencing depth, so rarefaction should be done for those metrics as well.
+
+```{r}
+# Load data
+params <- readRDS("R_objects/params_betadiv.RDS")
+MTRLS <- c("Feces","Cecum","Ileum","Cecum_HF","Ileum_HF","Cecum_LF","Ileum_LF","Feces_no20","Feces_HF","Feces_LF","Feces_HF_no0","Feces_LF_no0","Feces_HF_d08","Feces_LF_d08","Feces_HF-CTRL_d08","Feces_LF-CTRL_d08","Feces_HF-PFOS_d08","Feces_LF-PFOS_d08")
+load(params$input)
+
+#Extract metadata
+dat <- data.frame(sample_data(phy))
+
+#Add metadata for direct PFOS exposure
+for (i in dat$SampleID) {
+ dat$PFOS <- ifelse(dat$day == "d0", "ctrl", ifelse(dat$treatment == "PFOS","PFOS","ctrl"))
+ dat$feed_day <- paste0(dat$feed,"_",dat$day)
+ }
+
+#Merge addition to phyloseq element
+dat <- sample_data(dat)
+phy <- merge_phyloseq(phy, dat)
+
+# Save phyloseq with additional metadata
+save(phy, file = "R_objects/Phyloseq_beta.Rdata")
+
+#Calculate iterations of data for analysis
+for (MTRL in MTRLS) {
+  load("R_objects/Phyloseq_beta.Rdata")
+  message(paste0("Calcualting distances for ",MTRL,"..."))
+  # Create subset
+  if (MTRL == "Feces_no20") {
+    phy.clean <- subset_samples(phy, material == "Feces" & day != "d20")
+  } else if (MTRL == "Feces_HF") {
+        phy.clean <- subset_samples(phy, material == "Feces" & day != "d20" & feed == "HF")
+  } else if (MTRL == "Feces_LF") {
+        phy.clean <- subset_samples(phy, material == "Feces" & day != "d20" & feed == "LF")
+  } else if (MTRL == "Feces_HF_no0") {
+        phy.clean <- subset_samples(phy, material == "Feces" & day %in% c("d08","d12","d16","d21") & feed == "HF")
+  } else if (MTRL == "Feces_LF_no0") {
+        phy.clean <- subset_samples(phy, material == "Feces" & day %in% c("d08","d12","d16","d21") & feed == "LF")
+  } else if (MTRL == "Feces_HF_d08") {
+        phy.clean <- subset_samples(phy, material == "Feces" & day %in% c("d0","d08") & feed == "HF")
+  } else if (MTRL == "Feces_LF_d08") {
+        phy.clean <- subset_samples(phy, material == "Feces" & day %in% c("d0","d08") & feed == "LF")
+  } else if (MTRL == "Feces_HF-CTRL_d08") {
+        phy.clean <- subset_samples(phy, material == "Feces" & day %in% c("d0","d08") & feed_treat == "HF_CTRL")
+  } else if (MTRL == "Feces_HF-PFOS_d08") {
+        phy.clean <- subset_samples(phy, material == "Feces" & day %in% c("d0","d08") & feed_treat == "HF_PFOS")
+  } else if (MTRL == "Feces_LF-CTRL_d08") {
+        phy.clean <- subset_samples(phy, material == "Feces" & day %in% c("d0","d08") & feed_treat == "LF_CTRL")
+  } else if (MTRL == "Feces_LF-PFOS_d08") {
+        phy.clean <- subset_samples(phy, material == "Feces" & day %in% c("d0","d08") & feed_treat == "LF_PFOS")
+  } else if (MTRL == "Cecum_HF") {
+        phy.clean <- subset_samples(phy, material == "Cecum" & feed == "HF")
+  } else if (MTRL == "Cecum_LF") {
+        phy.clean <- subset_samples(phy, material == "Cecum" & feed == "LF")
+  } else if (MTRL == "Ileum_HF") {
+        phy.clean <- subset_samples(phy, material == "Ileum" & feed == "HF")
+  } else if (MTRL == "Ileum_LF") {
+        phy.clean <- subset_samples(phy, material == "Ileum" & feed == "LF")
+  } else {
+      phy.clean <- subset_samples(phy, material == MTRL)
+  }
+  
+  # Clean data
+  phy.clean <- prune_samples(sample_names(phy.clean)[!is.na(sample_data(phy.clean)[,params$group_var])], phy.clean)
+  
+  # Remove empty taxa
+  phy.clean <- prune_taxa(taxa_sums(phy.clean) > 0, phy.clean)
+  
+  # Recalculate midpoint root
+  phy_tree(phy.clean) <- phangorn::midpoint(phy_tree(phy.clean))
+  
+  # Perform multiple rarefactions
+  phy.rare <- multiple_rarefy(phy.clean)
+  
+  # Remove empty taxa
+  phy.rare <- prune_taxa(taxa_sums(phy.rare) > 0, phy.rare)
+  
+  # Recalculate midpoint root
+  phy_tree(phy.rare) <- phangorn::midpoint(phy_tree(phy.rare))
+  
+  # Save object
+  save(phy.rare, phy.clean, file = paste0("R_objects/Phyloseq_betadiv_",MTRL,".Rdata"))
+}
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
+invisible(gc()) #free up memory and report the memory usage.
+```
+
+## CALCULATE
+
+There are many different algorithms that can be used to calculate beta diversity. Each metric has its own advantages and many times a comparison of the results from two metrics tells more about the data than each one separately. I will include phylogeny based (UniFrac and weighted UniFrac), qualitative (presence/absence), quantitative (abundance based), and compositional (Aitchison) metrics in this template
+
+### UNWEIGHTED UNIFRAC
+
+The unique fraction metric, or UniFrac, measures the phylogenetic distance between sets of taxa in a phylogenetic tree as the fraction of the branch length of the tree that leads to descendants from either one environment or the other, but not both [(Lozupone & Knight, 2005)](https://doi.org/10.1128/AEM.71.12.8228-8235.2005). This metric is sensitive to sequencing depth, so it is required to use a rarefied phyloseq object The UniFrac algorithm requires a rooted tree, so if ASVs has been removed from the raw da the tree should be rerooted manually, else a random ASV will be chosen as root.
+
+```{r calc-unif, eval=FALSE, echo=TRUE}
+MTRLS <- c("Feces","Cecum","Ileum","Cecum_HF","Ileum_HF","Cecum_LF","Ileum_LF","Feces_no20","Feces_HF","Feces_LF","Feces_HF_no0","Feces_LF_no0","Feces_HF_d08","Feces_LF_d08","Feces_HF-CTRL_d08","Feces_LF-CTRL_d08","Feces_HF-PFOS_d08","Feces_LF-PFOS_d08")
+# load
+params <- readRDS("R_objects/params_betadiv.RDS")
+for (MTRL in MTRLS) {
+  load(paste0("R_objects/Phyloseq_betadiv_",MTRL,".Rdata"))
+  message(paste0("Calcualting distances for ",MTRL,"..."))
+
+  # Calculate UniFrac distances
+  unif.dist <- UniFrac(phy.rare, weighted = FALSE, parallel = FALSE)
+  
+  # Calculate PCoA data
+  unif.pcoa <- ordinate(phy.rare, method = "PCoA",distance = unif.dist)
+  unif.nmds <- metaMDS(unif.dist, k = 5, trymax = 1000)
+  
+  # Save distance objects
+  save(unif.dist, unif.nmds, unif.pcoa, phy.rare, file = paste0("R_objects/bdiv_unif_",MTRL,".RData"))
+}
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+### WEIGHTED UNIFRAC
+
+The unique fraction metric, or UniFrac, measures the phylogenetic distance between sets of taxa in a phylogenetic tree as the fraction of the branch length of the tree that leads to descendants from either one environment or the other, but not both [(Lozupone & Knight, 2005)](https://doi.org/10.1128/AEM.71.12.8228-8235.2005). Weighted UniFrac takes the abundance of each ASV into account instead of just presence/absence, which means that it will not be sensitive to sequencing depth. The UniFrac algorithm requires a rooted tree, so if ASVs has been removed from the raw da the tree should be rerooted manually, else a random ASV will be chosen as root.
+
+```{r calc-wunif, eval=FALSE, echo=TRUE}
+MTRLS <- c("Feces","Cecum","Ileum","Cecum_HF","Ileum_HF","Cecum_LF","Ileum_LF","Feces_no20","Feces_HF","Feces_LF","Feces_HF_no0","Feces_LF_no0","Feces_HF_d08","Feces_LF_d08","Feces_HF-CTRL_d08","Feces_LF-CTRL_d08","Feces_HF-PFOS_d08","Feces_LF-PFOS_d08")
+# load
+params <- readRDS("R_objects/params_betadiv.RDS")
+for (MTRL in MTRLS) {
+  load(paste0("R_objects/Phyloseq_betadiv_",MTRL,".Rdata"))
+  message(paste0("Calcualting distances for ",MTRL,"..."))
+
+  # Calculate UniFrac distances
+  wuf.dist <- UniFrac(phy.clean, weighted = TRUE, parallel = FALSE)
+  
+  # Calculate PCoA data
+  wuf.pcoa <- ordinate(phy.clean, method = "PCoA",distance = wuf.dist)
+  wuf.nmds <- metaMDS(wuf.dist, k = 5, trymax = 1000)
+  
+  # Save distance objects
+  save(wuf.dist, wuf.nmds, wuf.pcoa, phy.clean, file = paste0("R_objects/bdiv_wuf_",MTRL,".RData"))
+}
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+### BRAY-CURTIS
+
+Bray-Curtis dissimilarity index (as implemented by the vegan package) is the sum of abundance difference for each species/ASV, divided by theoretical maximum difference between the samples if no ASV overlapped. The formula used is: $$d_{jk} = \frac{\sum|n_{ij}-n_{ik}|}{\sum(n_{ij}+n_{ik})}$$ Bray-Curtis dissimilarity is not a true distance metric as it does not adhere to the [triangle inequality](https://en.wikipedia.org/wiki/Triangle_inequality), but is often used to compare microbiomes. Bray-Curtis dissimilarities are based on the assumption that measurements are taken from equal areas, so differences in total counts between samples will bias the metric. As differences in sequences depth is due to differences in the lab procedures and not biological differences, we should transform our counts to relative abundances before calculating Bray-Curtis dissimilarities. By transforming the data to abundances no data is lost, but rarefied data can also be used.
+
+```{r calc-bray, eval=FALSE, echo=TRUE}
+MTRLS <- c("Feces","Cecum","Ileum","Cecum_HF","Ileum_HF","Cecum_LF","Ileum_LF","Feces_no20","Feces_HF","Feces_LF","Feces_HF_no0","Feces_LF_no0","Feces_HF_d08","Feces_LF_d08","Feces_HF-CTRL_d08","Feces_LF-CTRL_d08","Feces_HF-PFOS_d08","Feces_LF-PFOS_d08")
+# load
+params <- readRDS("R_objects/params_betadiv.RDS")
+for (MTRL in MTRLS) {
+  load(paste0("R_objects/Phyloseq_betadiv_",MTRL,".Rdata"))
+  message(paste0("Calcualting distances for ",MTRL,"..."))
+  
+  # transform counts
+  phy.ra <- transform_sample_counts(phy.clean, function(x) x/sum(x))
+  
+  # Calculate Bray-Curtis dissimilarities
+  bray.dist <- distance(phy.ra, method = "bray",)
+  
+  # Calculate PCoA data
+  bray.pcoa <- ordinate(phy.ra, method = "PCoA",distance = bray.dist)
+  bray.nmds <- metaMDS(bray.dist, k = 5, trymax = 1000)
+  
+  # Save distance objects
+  save(bray.dist, bray.nmds, bray.pcoa, phy.ra, file = paste0("R_objects/bdiv_bray_",MTRL,".RData"))
+}
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+### JACCARD
+
+The Jaccard similarity measures the similarity between two sets of data to see which members are shared and distinct. The Jaccard similarity is calculated by dividing the number of observations in both sets by the number of observations in either set. In other words, the Jaccard similarity can be computed as the size of the intersection divided by the size of the union of two sets. This can be written in set notation using intersection $(A \cap B)$ and unions $(A \cup B)$ of two sets: $$J(A,B) = \frac{|A \cap B|}{|A \cup B|}$$ where $|A \cap B|$ gives the number of members shared between both sets and $|A \cup B|$ gives the total number of members in both sets (shared and un-shared). The Jaccard Similarity will be 0 if the two sets don't share any values and 1 if the two sets are identical.
+
+Additionally, this function can be used to find the dissimilarity between two sets by calculating:
+$$d(A,B) = 1 - J(A,B)$$
+> We will be calculating binary Jaccard dissimilarity
+
+```{r calc-jac, eval=FALSE, echo=TRUE}
+MTRLS <- c("Feces","Cecum","Ileum","Cecum_HF","Ileum_HF","Cecum_LF","Ileum_LF","Feces_no20","Feces_HF","Feces_LF","Feces_HF_no0","Feces_LF_no0","Feces_HF_d08","Feces_LF_d08","Feces_HF-CTRL_d08","Feces_LF-CTRL_d08","Feces_HF-PFOS_d08","Feces_LF-PFOS_d08")
+# load
+params <- readRDS("R_objects/params_betadiv.RDS")
+for (MTRL in MTRLS) {
+  load(paste0("R_objects/Phyloseq_betadiv_",MTRL,".Rdata"))
+  message(paste0("Calcualting distances for ",MTRL,"..."))
+  
+  # Calculate Jaccard binary dissimilarities
+  jac.dist <- distance(phy.rare, method = "jaccard", binary = TRUE)
+  
+  # Calculate PCoA data
+  jac.pcoa <- ordinate(phy.rare, method = "PCoA",distance = jac.dist)
+  jac.nmds <- metaMDS(jac.dist, k = 5, trymax = 1000)
+  
+  # Save distance objects
+  save(jac.dist, jac.nmds, jac.pcoa, phy.rare, file = paste0("R_objects/bdiv_jac_",MTRL,".RData"))
+}
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+### AITCHISON
+
+Aitchison distance (1986) and robust Aitchison distance [(Martino et al. 2019)](https://journals.asm.org/doi/10.1128/mSystems.00016-19) are metrics that deal with compositional data. The Aitchison distance is a dissimilarity measure calculated as the Euclidean distance between observations (samples) after performing a centered log ratio (“clr”) transformation. Aitchison distance has been said to outperform Jensen-Shannon divergence and Bray-Curtis dissimilarity, due to a better stability to subsetting and aggregation, and it being a proper distance (Aitchison et al., 2000).
+
+```{r calc-ait, eval=FALSE, echo=TRUE}
+MTRLS <- c("Feces","Cecum","Ileum","Cecum_HF","Ileum_HF","Cecum_LF","Ileum_LF","Feces_no20","Feces_HF","Feces_LF","Feces_HF_no0","Feces_LF_no0","Feces_HF_d08","Feces_LF_d08","Feces_HF-CTRL_d08","Feces_LF-CTRL_d08","Feces_HF-PFOS_d08","Feces_LF-PFOS_d08")
+# load
+params <- readRDS("R_objects/params_betadiv.RDS")
+for (MTRL in MTRLS) {
+  load(paste0("R_objects/Phyloseq_betadiv_",MTRL,".Rdata"))
+  message(paste0("Calcualting distances for ",MTRL,"..."))
+  
+  # Calculate Bray-Curtis dissimilarities
+  ait.dist <- vegan::vegdist(otu_table(phy.clean), method = "robust.aitchison")
+  
+  # Calculate PCoA data
+  ait.pcoa <- ordinate(phy.clean, method = "PCoA",distance = ait.dist)
+  ait.nmds <- metaMDS(ait.dist, k = 5, trymax = 1000)
+  
+  # Save distance objects
+  save(ait.dist, ait.nmds, ait.pcoa, phy.clean, file = paste0("R_objects/bdiv_ait_",MTRL,".RData"))
+}
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+### SUBSETS
+Running subsets for downstream analysis.
+```{r calc-unif, eval=FALSE, echo=TRUE}
+METRICES <- c("bray","unif","wuf","jac","ait")
+DAYS <- c("d0","d08","d12","d16","d20","d21")
+FEEDS <- c("HF","LF","ALL")
+MTRLS <- c("Feces","Cecum","Ileum")
+
+# load
+params <- readRDS("R_objects/params_betadiv.RDS")
+#load("R_objects/Phyloseq_betadiv.Rdata")
+for (MTRL in MTRLS) {
+message(paste0("Running loop for calculation of beta diversity subsets for ",MTRL,"."))
+  if (MTRL == "Cecum" || MTRL == "Ileum") {
+    DAYS <- c("d08","d21")
+  } else if (MTRL == "Feces") {
+    DAYS <- c(,"d0","d08","d12","d16","d20","d21")
+  }
+  for (DAY in DAYS) {
+    print(paste0("Processing day ",DAY,"..."))
+    for (FEED in FEEDS) {
+      for (METRIC in METRICES) {
+    load(paste0("R_objects/Phyloseq_betadiv_",MTRL,".Rdata"))
+        if (FEED == "ALL") {
+          FILENAME <- paste0("R_objects/bdiv_sub_",MTRL,"_",DAY,"_",METRIC,".Rdata")
+        } else {
+          FILENAME <- paste0("R_objects/bdiv_sub_",MTRL,"_",DAY,"_",FEED,"_",METRIC,".Rdata")
+        }
+        if (METRIC == "unif") {
+          load(paste0("R_objects/bdiv_unif_",MTRL,".RData"))
+          tmp.dist <- as.matrix(unif.dist)
+          if (FEED == "ALL") {
+            phy.sub <- subset_samples(phy.rare, material == MTRL & day %in% DAY)
+          } else {
+            phy.sub <- subset_samples(phy.rare, material == MTRL & day %in% DAY & feed %in% FEED)
+          }
+          SUBS <- sample_names(phy.sub)
+          
+          tmp.sub.dist <- tmp.dist[SUBS, SUBS]
+          unif.sub.dist <- as.dist(tmp.sub.dist, diag = TRUE, upper = TRUE)
+          
+          unif.sub.pcoa <- ordinate(phy.sub, method = "PCoA",distance = unif.sub.dist)
+          unif.sub.nmds <- metaMDS(unif.sub.dist, k = 5, trymax = 1000)
+          
+          save(phy.sub, unif.sub.dist, unif.sub.nmds, unif.sub.pcoa, file = FILENAME)
+        } else if (METRIC == "wuf") {
+          load(paste0("R_objects/bdiv_wuf_",MTRL,".RData"))
+          tmp.dist <- as.matrix(wuf.dist)
+          
+          if (FEED == "ALL") {
+            phy.sub <- subset_samples(phy.clean, material == MTRL & day %in% DAY)
+          } else {
+            phy.sub <- subset_samples(phy.clean, material == MTRL & day %in% DAY & feed %in% FEED)
+          }
+          SUBS <- sample_names(phy.sub)
+          
+          tmp.sub.dist <- tmp.dist[SUBS, SUBS]
+          wuf.sub.dist <- as.dist(tmp.sub.dist, diag = TRUE, upper = TRUE)
+          
+          wuf.sub.pcoa <- ordinate(phy.sub, method = "PCoA",distance = wuf.sub.dist)
+          wuf.sub.nmds <- metaMDS(wuf.sub.dist, k = 5, trymax = 1000)
+          
+          save(phy.sub, wuf.sub.dist, wuf.sub.nmds, wuf.sub.pcoa, file = FILENAME)
+        } else if (METRIC == "bray") {
+          load(paste0("R_objects/bdiv_bray_",MTRL,".RData"))
+          tmp.dist <- as.matrix(bray.dist)
+          
+          if (FEED == "ALL") {
+            phy.sub <- subset_samples(phy.rare, material == MTRL & day %in% DAY)
+          } else {
+            phy.sub <- subset_samples(phy.rare, material == MTRL & day %in% DAY & feed %in% FEED)
+          }
+          SUBS <- sample_names(phy.sub)
+          
+          tmp.sub.dist <- tmp.dist[SUBS, SUBS]
+          bray.sub.dist <- as.dist(tmp.sub.dist, diag = TRUE, upper = TRUE)
+          
+          bray.sub.pcoa <- ordinate(phy.sub, method = "PCoA", distance = bray.sub.dist)
+          bray.sub.nmds <- metaMDS(bray.sub.dist, k = 5, trymax = 1000)
+          
+          save(phy.sub, bray.sub.dist, bray.sub.pcoa, bray.sub.nmds, file = FILENAME)
+        } else if (METRIC == "jac") {
+          load(paste0("R_objects/bdiv_jac_",MTRL,".RData"))
+          tmp.dist <- as.matrix(jac.dist)
+          
+          if (FEED == "ALL") {
+            phy.sub <- subset_samples(phy.rare, material == MTRL & day %in% DAY)
+          } else {
+            phy.sub <- subset_samples(phy.rare, material == MTRL & day %in% DAY & feed %in% FEED)
+          }
+          SUBS <- sample_names(phy.sub)
+          
+          tmp.sub.dist <- tmp.dist[SUBS, SUBS]
+          jac.sub.dist <- as.dist(tmp.sub.dist, diag = TRUE, upper = TRUE)
+          
+          jac.sub.pcoa <- ordinate(phy.sub, method = "PCoA", distance = jac.sub.dist)
+          jac.sub.nmds <- metaMDS(jac.sub.dist, k = 5, trymax = 1000)
+          
+          save(phy.sub, jac.sub.dist, jac.sub.pcoa, jac.sub.nmds, file = FILENAME)
+        } else if (METRIC == "ait") {
+          load(paste0("R_objects/bdiv_ait_",MTRL,".RData"))
+          tmp.dist <- as.matrix(ait.dist)
+          
+          if (FEED == "ALL") {
+            phy.sub <- subset_samples(phy.clean, material == MTRL & day %in% DAY)
+          } else {
+            phy.sub <- subset_samples(phy.clean, material == MTRL & day %in% DAY & feed %in% FEED)
+          }
+          SUBS <- sample_names(phy.sub)
+          
+          tmp.sub.dist <- tmp.dist[SUBS, SUBS]
+          ait.sub.dist <- as.dist(tmp.sub.dist, diag = TRUE, upper = TRUE)
+          
+          ait.sub.pcoa <- ordinate(phy.sub, method = "PCoA", distance = ait.sub.dist)
+          ait.sub.nmds <- metaMDS(ait.sub.dist, k = 5, trymax = 1000)
+          
+          save(phy.sub, ait.sub.dist, ait.sub.pcoa, ait.sub.nmds, file = FILENAME)
+        }
+      }
+    }
+  }
+}
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+```
+
+# VISUALIZATION (TIMELINE)
+
+Beta diversity is generally visualized by a NMDS (non metric multidimensional scaling) or PCoA (Principal Coordinate Analysis) plots. Both methods creates a representation of the beta diversity on few axes (3D plots should only be used for interactive on screen representations). Here we have chosen to present in PCoA. Distance separation is based on Axis 1 and 2 as these provide the clearest distances of the analyses.
+
+## ANALYSES FOR ALL SUBSETS
+The following block runs processing and presentation for all distance metrices subsets of interest along with statistical support through PERMANOVA.
+These subsets include the following (Note: day 20 is excluded for all sets):
+
+ - Feces samples
+   + All samples
+   + Separated by diet (HF and LF)
+      + Separated by treatment (CTRL and PFOS)
+      + Isolated Day 0 and 8
+      + All days excluding Day 0 (due to significant difference in LF DAy 0 data)
+ - Ileum samples
+   + All samples
+   + Separated by diet (HF and LF)
+ - Cecum samples
+   + All samples
+   + Separated by diet (HF and LF)
+
+```{r, eval=TRUE, echo=TRUE}
+params <- readRDS("R_objects/params_betadiv.RDS")
+
+# Define Metrices 
+METRICES <- c("bray","jac","unif","wuf")
+
+# Define Subsets to analyse
+MTRLS <- c("Feces_no20","Feces_HF","Feces_HF_no0","Feces_HF_d08","Feces_LF","Feces_LF_no0","Feces_LF_d08","Feces_HF-CTRL_d08","Feces_LF-CTRL_d08","Feces_HF-PFOS_d08","Feces_LF-PFOS_d08","Cecum","Cecum_HF","Cecum_LF","Ileum","Ileum_HF","Ileum_LF")
+
+# Run loop
+for (MTRL in MTRLS) {
+  for (METRIC in METRICES) {
+    print(paste0("Processing ",MTRL," ",METRIC," data..."))
+    # Choose variable
+    VAR <- "feed_treat_day"
+  
+    # Load data based on metric
+    if (METRIC == "unif") {
+      load(paste0("R_objects/bdiv_unif_",MTRL,".RData"))
+      dist.used <- unif.dist
+      nmds.used <- unif.nmds
+      pcoa.used <- unif.pcoa
+      phy.used <- phy.rare
+      rm(unif.dist, unif.nmds, unif.pcoa, phy.rare)
+    } else if (METRIC == "wuf") {
+      load(paste0("R_objects/bdiv_wuf_",MTRL,".RData"))
+      dist.used <- wuf.dist
+      nmds.used <- wuf.nmds
+      pcoa.used <- wuf.pcoa
+      phy.used <- phy.clean
+      rm(wuf.dist, wuf.nmds, wuf.pcoa,phy.clean)
+    } else if (METRIC == "bray"){
+      load(paste0("R_objects/bdiv_bray_",MTRL,".RData"))
+      dist.used <- bray.dist
+      nmds.used <- bray.nmds
+      pcoa.used <- bray.pcoa
+      phy.used <- phy.ra
+      rm(bray.dist, bray.nmds, bray.pcoa, phy.ra)
+    } else if (METRIC == "jac"){
+      load(paste0("R_objects/bdiv_jac_",MTRL,".RData"))
+      dist.used <- jac.dist
+      nmds.used <- jac.nmds
+      pcoa.used <- jac.pcoa
+      phy.used <- phy.rare
+      rm(jac.dist, jac.nmds, jac.pcoa, phy.rare)
+    } else if (METRIC == "ait"){
+      load(paste0("R_objects/bdiv_ait_",MTRL,".RData"))
+      dist.used <- ait.dist
+      nmds.used <- ait.nmds
+      pcoa.used <- ait.pcoa
+      phy.used <- phy.clean
+      rm(ait.dist, ait.nmds, ait.pcoa, phy.clean)
+    }
+  
+    # Extract metadata from phyloseq
+    mdat <- data.frame(sample_data(phy.used))
+
+    # If a variable consist of numbers, but represent distinct groups remember to make it into a factor
+    mdat[,VAR] <- as.factor(mdat[,VAR])
+    
+    COL_DFT <- c("0_HF_CTRL" = "#e4fadd","8_HF_CTRL" = "#d2e9cc", "12_HF_CTRL" = "#9fd3a3", "16_HF_CTRL" = "#65bf76", "21_HF_CTRL" = "#32a248",
+               "0_HF_PFOS" = "#d2e9cc","8_HF_PFOS" = "#9fd3a3", "12_HF_PFOS" = "#65bf76", "16_HF_PFOS" = "#32a248", "21_HF_PFOS" = "#108026",
+               "0_LF_CTRL" = "#def8fd",	"8_LF_CTRL" = "#bde7fb", "12_LF_CTRL" = "#86c1e5", "16_LF_CTRL" = "#509cce", "21_LF_CTRL" = "#1879b7",
+               "0_LF_PFOS" = "#bde7fb",	"8_LF_PFOS" = "#86c1e5", "12_LF_PFOS" = "#509cce", "16_LF_PFOS" = "#1879b7", "21_LF_PFOS" = "#065795")
+    
+    COL_DF <- c("HF_d0" = "#d2e9cc","HF_d08" = "#9fd3a3", "HF_d12" = "#65bf76", "HF_d16" = "#32a248", "HF_d21" = "#108026",
+               "LF_d0" = "#bde7fb",	"LF_d08" = "#86c1e5", "LF_d12" = "#509cce", "LF_d16" = "#1879b7", "LF_d21" = "#065795")
+
+    # Create plots of eigenvalues for PCoA plots
+    pcoa.tab <- plot_ordination(phy.used, pcoa.used,axes = 1:5,justDF = TRUE)
+    nmds.tab <- plot_ordination(phy.used, nmds.used,axes = 1:5,justDF = TRUE)
+    
+    # Reformat tables to create one common table
+    colnames(nmds.tab)[1:5] <- c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5")
+    
+    nmds.tab$ordination <- "nmds"
+    pcoa.tab$ordination <- "pcoa"
+    
+    # Calculate centroids PCOA
+    centroid.1 <- pcoa.tab %>% group_by(across(all_of("feed_treat_day"))) %>% get_summary_stats("Axis.1", type = "mean")
+    centroid.1 <- subset(centroid.1, select = -c(variable,n))
+    colnames(centroid.1)[1:2] <- c("feed_treat_day","X")
+    centroid.2 <- pcoa.tab %>% group_by(across(all_of("feed_treat_day"))) %>% get_summary_stats("Axis.2", type = "mean")
+    centroid.2 <- subset(centroid.2, select = -c(feed_treat_day,variable,n))
+    colnames(centroid.2)[1] <- "Y"
+    centroid <- cbind(centroid.1,centroid.2)
+
+    centroid <- centroid %>% mutate("day" = case_when(grepl("0_",feed_treat_day) ~ "d0",
+                                                    grepl("8_",feed_treat_day) ~ "d08",
+                                                    grepl("12_",feed_treat_day) ~ "d12",
+                                                    grepl("16_",feed_treat_day) ~ "d16",# grepl("20_",feed_treat_day) ~ "d20",
+                                                    grepl("21_",feed_treat_day) ~ "d21"),
+                                  "label" = case_when(grepl("0_",feed_treat_day) ~ "Day 0",
+                                                      grepl("8_",feed_treat_day) ~ "Day 8",
+                                                      grepl("12_",feed_treat_day) ~ "Day 12",
+                                                      grepl("16_",feed_treat_day) ~ "Day 16",
+                                                      grepl("21_",feed_treat_day) ~ "Day 21",))
+    centroid <- centroid %>% mutate("feed_treat" = case_when(grepl("HF_CTRL",feed_treat_day) ~ "HF_CTRL",
+                                                       grepl("HF_PFOS",feed_treat_day) ~ "HF_PFOS",
+                                                       grepl("LF_CTRL",feed_treat_day) ~ "LF_CTRL",
+                                                       grepl("LF_PFOS",feed_treat_day) ~ "LF_PFOS"))
+    centroid <- centroid %>% mutate("coord" = case_when(day == "d0" ~ "x1",
+                                                      day == "d08" ~ "x2",
+                                                      day == "d12" ~ "x3",
+                                                      day == "d16" ~ "x4",
+                                                      # day == "d20" ~ "x5",
+                                                      day == "d21" ~ "x5"))
+
+    centroid <- centroid[order(centroid$day),]
+
+    ord.tab <- rbind(nmds.tab,pcoa.tab)
+    ord.tab[,VAR] <- as.factor(ord.tab[,VAR])
+  
+    # Melt axis to be in one variable
+    axis.tab <- pivot_longer(data = ord.tab, cols = c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5"), names_to = "Axis", values_to = "position")
+  
+    # Plot PCoA
+    pcoa.plot <- ggplot(data = ord.tab[ord.tab$ordination == "pcoa",], aes_string(x = "Axis.1", y = "Axis.2", color = "feed_day")) +
+      stat_ellipse(aes_string(x = "Axis.1", y = "Axis.2", color = "feed_day", fill = "feed_day"), geom = "polygon", alpha = 0.1, level = 0.9) +#"feed_treat_day"
+    geom_point() +
+    geom_path(data = centroid, aes_string(x = "X", y = "Y", color = "feed_day"), color = "#222222", size = 0.5, alpha = 0.8, arrow = arrow(type = "closed", length = unit(2.5,"mm"))) + #"feed_treat_day"
+    geom_point(data = centroid, aes_string(x = "X", y = "Y", color = "feed_day"), color = "#555555", shape = 20, size = 3, alpha = 1) +#"feed_treat_day"
+    geom_text_repel(data = centroid, mapping = aes(x = X, y = Y), label = centroid$label, size = 4, min.segment.length = 0, segment.alpha = 0.8, box.padding = 1, force = 1, color = "#222222", position = "identity", direction = "both") +
+    theme_pubr() +
+    scale_color_manual(values = COL_DF) +#COL_DFT
+    scale_fill_manual(values = COL_DF, name = "Feed + Day", 
+                      labels = c("HF_d0" = "HF 0","HF_d08" = "HF 8", "HF_d12" = "HF 12", "HF_d16" = "HF 16", "HF_d21" = "HF 21",
+                                 "LF_d0" = "LF 0",	"LF_d08" = "LF 8", "LF_d12" = "LF 12", "LF_d16" = "LF 16", "LF_d21" = "LF 21"),
+                      breaks = c("HF_d0","LF_d0","HF_d08","LF_d08","HF_d12","LF_d12","HF_d16","LF_d16","HF_d21","LF_d21")) +#COL_DFT
+    facet_wrap(.~feed_treat, labeller = labeller(feed_treat = c("LF_CTRL" = "LF-CTRL","LF_PFOS" = "LF-PFOS","HF_CTRL" = "HF-CTRL","HF_PFOS" = "HF-PFOS"))) +
+    scale_y_continuous() +
+    labs(x = "PCoA 1", y = "PCoA 2") +
+    guides(color = "none", fill = guide_legend(override.aes = list(alpha = 1, byrow = TRUE, direction = "horizontal")))
+  pcoa.plot
+  
+  # Calculate PERMANOVA
+  ## Note: use of column variable "PFOS" rather than "treatment", as this variable reflects direct PFOS exposure on all days and not just treatment grouping - this is important to detect impact of PFOS longitudinally as HF-PFOS and LF-PFOS has not been exposed on day 0.
+  if (MTRL %in% c("Feces_HF","Feces_LF","Feces_HF_no0","Feces_LF_no0","Feces_HF_d08","Feces_LF_d08","Cecum_HF","Cecum_LF","Ileum_HF","Ileum_LF")) {
+    perm <- adonis2(dist.used ~ day*PFOS, data = mdat, permutations = 999, na.action = na.omit)
+  } else if (MTRL %in% c("Feces_HF-CTRL_d08","Feces_LF-CTRL_d08","Feces_HF-PFOS_d08","Feces_LF-PFOS_d08")) {
+    perm <- adonis2(dist.used ~ day, data = mdat, permutations = 999, na.action = na.omit)
+  } else {
+    perm <- adonis2(dist.used ~ day*feed*PFOS, data = mdat, permutations = 999, na.action = na.omit)
+  }
+  
+  # Print output for loop
+  print(pcoa.plot)
+  print(paste0("PERMANOVA RESULTS FOR: ",METRIC))
+  print(perm)
+  print("")
+  
+  if (METRIC == "bray") {
+    bray.plot <- pcoa.plot
+    bray.perm <- perm
+  } else if (METRIC == "jac") {
+    jac.plot <- pcoa.plot
+    jac.perm <- perm
+  } else if (METRIC == "unif") {
+    unif.plot <- pcoa.plot
+    unif.perm <- perm
+  } else if (METRIC == "wuf") {
+    wuf.plot <- pcoa.plot
+    wuf.perm <- perm
+  } else if (METRIC == "ait") {
+    ait.plot <- pcoa.plot
+    ait.perm <- perm
+  }
+  
+  # Save PERMANOVA as txt file
+  if (!file.exists(paste0("plots/bdiv/timeline/",MTRL))) dir.create(file.path(getwd(), paste0("plots/bdiv/timeline/",MTRL)))
+  write.table(perm, file = paste0("plots/bdiv/timeline/",MTRL,"/bdiv_timeline_",MTRL,"_",METRIC,".txt"))
+  
+  # Save plot
+  if (MTRL %in% c("Feces_no20","Cecum","Ileum")) {
+    suppressMessages(ggsave(filename = paste0("plots/bdiv/timeline/",MTRL,"/bdiv_timeline_",MTRL,"_",METRIC,".png"), plot = pcoa.plot, device = "png", dpi = 300, units = "mm", height = 200, width = 200))
+    suppressMessages(ggsave(filename = paste0("plots/bdiv/timeline/",MTRL,"/bdiv_timeline_",MTRL,"_",METRIC,".pdf"), plot = pcoa.plot, device = "pdf", dpi = 300, units = "mm", height = 200, width = 200))
+  } else {
+    suppressMessages(ggsave(filename = paste0("plots/bdiv/timeline/",MTRL,"/bdiv_timeline_",MTRL,"_",METRIC,".png"), plot = pcoa.plot, device = "png", dpi = 300, units = "mm", height = 170, width = 150))
+    suppressMessages(ggsave(filename = paste0("plots/bdiv/timeline/",MTRL,"/bdiv_timeline_",MTRL,"_",METRIC,".pdf"), plot = pcoa.plot, device = "pdf", dpi = 300, units = "mm", height = 170, width = 150))
+
+  }
+  }
+  save(bray.perm,bray.plot,jac.perm,jac.plot,unif.perm,unif.plot,wuf.perm,wuf.plot,ait.perm,ait.plot, file = paste0("plots/bdiv/timeline/",MTRL,"/PCoA_plot_",MTRL,".Rdata"))
+}
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
+
+
+```
+
+# SPECIAL FIGURES (Combined Alpha- and Beta-diversity) {.tabset .tabset-dropdown}
+## Figure 6: Faecal Alpha & Beta Diversity
+```{r}
+params <- readRDS("R_objects/Adiv_params.RDS")
+load("scripts/adiv.Rdata")
+
+# Load rdata files with scfa plots
+div.plots <- c("plots/adiv/timeline/adiv_figures.Rdata","plots/bdiv/timeline/Feces_HF_no0/PCoA_plot_Feces_HF_no0.Rdata")
+lapply(div.plots, load,.GlobalEnv)
+# rm_legend <- function(p){p + theme(legend.position = "none")}
+
+#Renaming bdiv HF plots
+hf.bray.perm <- bray.perm
+hf.bray.plot <- rm_legend(bray.plot)
+hf.jac.perm <- jac.perm
+hf.jac.plot <- rm_legend(jac.plot)
+hf.unif.perm <- unif.perm
+hf.unif.plot <- rm_legend(unif.plot)
+hf.wuf.perm <- wuf.perm
+hf.wuf.plot <- rm_legend(wuf.plot)
+hf.ait.perm <- ait.perm
+hf.ait.plot <- rm_legend(ait.plot)
+
+# Load bdiv LF plots
+load("plots/bdiv/timeline/Feces_LF_no0/PCoA_plot_Feces_LF_no0.Rdata")
+
+#Renaming bdiv HF plots
+lf.bray.perm <- bray.perm
+lf.bray.plot <- rm_legend(bray.plot)
+lf.jac.perm <- jac.perm
+lf.jac.plot <- rm_legend(jac.plot)
+lf.unif.perm <- unif.perm
+lf.unif.plot <- rm_legend(unif.plot)
+lf.wuf.perm <- wuf.perm
+lf.wuf.plot <- rm_legend(wuf.plot)
+lf.ait.perm <- ait.perm
+lf.ait.plot <- rm_legend(ait.plot)
+
+load("plots/bdiv/timeline/Feces_no20/PCoA_plot_Feces_no20.Rdata")
+
+legend <- get_legend(bray.plot)
+
+#remove leftovers
+rm(bray.perm,bray.plot,jac.perm,jac.plot,unif.perm,unif.plot,wuf.perm,wuf.plot,ait.perm,ait.plot)
+
+
+p.adiv <- ggarrange(p.obs,p.sha,p.fpd, 
+                    nrow = 1, 
+                    labels = c("A","B","C"),
+                    common.legend = TRUE,
+                    legend = "top",
+                    font.label = list(size = 24, face = "bold"))
+p.adiv
+
+p.bdiv <- ggarrange(hf.bray.plot, hf.jac.plot, lf.bray.plot, lf.jac.plot,
+                   ncol = 2, nrow = 2,
+                   align = "hv",
+                   label.x = 0,
+                   font.label = list(size = 24, face = "bold"),
+                   labels = c("C","D","E","F"))
+p.bdiv
+
+p.all <- ggarrange(p.adiv, legend, p.bdiv,
+                   ncol = 1, nrow = 3,
+                   heights = c(3,0.5,4))
+p.all
+
+# Save combined graphics
+ggsave(filename = "plots/figures/diversity_combined_bray_jac.png", p.all, device = "png", dpi = 300, height = 350, width = 350, units = "mm")
+ggsave(filename = "plots/figures/diversity_combined_bray_jac.pdf", p.all, device = "pdf", dpi = 300, height = 350, width = 350, units = "mm")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE)[ls(all.names = TRUE) != "params"])
+invisible(gc())
+```
+
+## Figure A.2: ILEUM DIVERSITY
+```{r}
+load("scripts/adiv.Rdata")
+
+load("plots/adiv/alpha_d08/adiv_Ileum_d08.Rdata")
+# renaming
+p.eve.8 <- p.eve
+p.obs.8 <- p.obs
+p.sha.8 <- p.sha
+p.fpd.8 <- p.fpd
+load("plots/adiv/alpha_d21/adiv_Ileum_d21.Rdata")
+p.eve.21 <- p.eve
+p.obs.21 <- p.obs
+p.sha.21 <- p.sha
+p.fpd.21 <- p.fpd
+rm(p.eve,p.sha,p.obs,p.fpd)
+
+load("plots/bdiv/timeline/Ileum_HF/PCoA_plot_Ileum_HF.Rdata")
+#Renaming bdiv HF plots
+hf.bray.perm <- bray.perm
+hf.bray.plot <- rm_legend(bray.plot)
+hf.jac.perm <- jac.perm
+hf.jac.plot <- rm_legend(jac.plot)
+hf.unif.perm <- unif.perm
+hf.unif.plot <- rm_legend(unif.plot)
+hf.wuf.perm <- wuf.perm
+hf.wuf.plot <- rm_legend(wuf.plot)
+hf.ait.perm <- ait.perm
+hf.ait.plot <- rm_legend(ait.plot)
+
+# Load bdiv LF plots
+load("plots/bdiv/timeline/Ileum_LF/PCoA_plot_Ileum_LF.Rdata")
+
+#Renaming bdiv HF plots
+lf.bray.perm <- bray.perm
+lf.bray.plot <- rm_legend(bray.plot)
+lf.jac.perm <- jac.perm
+lf.jac.plot <- rm_legend(jac.plot)
+lf.unif.perm <- unif.perm
+lf.unif.plot <- rm_legend(unif.plot)
+lf.wuf.perm <- wuf.perm
+lf.wuf.plot <- rm_legend(wuf.plot)
+lf.ait.perm <- ait.perm
+lf.ait.plot <- rm_legend(ait.plot)
+
+load("plots/bdiv/timeline/Ileum/PCoA_plot_Ileum.Rdata")
+
+legend <- get_legend(bray.plot)
+
+#remove leftovers
+rm(bray.perm,bray.plot,jac.perm,jac.plot,unif.perm,unif.plot,wuf.perm,wuf.plot,ait.perm,ait.plot)
+
+# Call plots
+p.adiv <- ggarrange(p.obs.8,p.sha.8,p.fpd.8, p.obs.21,p.sha.21,p.fpd.21, 
+                    nrow = 2, ncol = 3,
+                    labels = c("A","","","B","",""),
+                    common.legend = TRUE,
+                    align = "hv",
+                    legend = "top",
+                    font.label = list(size = 24, face = "bold"))
+p.adiv
+
+p.bdiv <- ggarrange(hf.bray.plot, hf.jac.plot, lf.bray.plot, lf.jac.plot,
+                   ncol = 2, nrow = 2,
+                   align = "hv",
+                   label.x = 0,
+                   font.label = list(size = 24, face = "bold"),
+                   labels = c("C","D","E","F"))
+p.bdiv
+
+p.all <- ggarrange(p.adiv, legend, p.bdiv,
+                   ncol = 1, nrow = 3,
+                   heights = c(3,0.5,4))
+p.all
+
+# Save combined graphics
+ggsave(filename = "plots/figures/diversity_ileum_combined_bray_jac.png", p.all, device = "png", dpi = 300, height = 350, width = 350, units = "mm")
+ggsave(filename = "plots/figures/diversity_ileum_combined_bray_jac.pdf", p.all, device = "pdf", dpi = 300, height = 350, width = 350, units = "mm")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE)[ls(all.names = TRUE) != "params"])
+invisible(gc())
+
+```
+
+## Figure A.3: CAECUM DIVERSITY
+```{r}
+load("scripts/adiv.Rdata")
+
+load("plots/adiv/alpha_d08/adiv_Cecum_d08.Rdata")
+# renaming
+p.eve.8 <- p.eve
+p.obs.8 <- p.obs
+p.sha.8 <- p.sha
+p.fpd.8 <- p.fpd
+load("plots/adiv/alpha_d21/adiv_Cecum_d21.Rdata")
+p.eve.21 <- p.eve
+p.obs.21 <- p.obs
+p.sha.21 <- p.sha
+p.fpd.21 <- p.fpd
+rm(p.eve,p.sha,p.obs,p.fpd)
+
+load("plots/bdiv/timeline/Cecum_HF/PCoA_plot_Cecum_HF.Rdata")
+#Renaming bdiv HF plots
+hf.bray.perm <- bray.perm
+hf.bray.plot <- rm_legend(bray.plot)
+hf.jac.perm <- jac.perm
+hf.jac.plot <- rm_legend(jac.plot)
+hf.unif.perm <- unif.perm
+hf.unif.plot <- rm_legend(unif.plot)
+hf.wuf.perm <- wuf.perm
+hf.wuf.plot <- rm_legend(wuf.plot)
+hf.ait.perm <- ait.perm
+hf.ait.plot <- rm_legend(ait.plot)
+
+# Load bdiv LF plots
+load("plots/bdiv/timeline/Cecum_LF/PCoA_plot_Cecum_LF.Rdata")
+
+#Renaming bdiv HF plots
+lf.bray.perm <- bray.perm
+lf.bray.plot <- rm_legend(bray.plot)
+lf.jac.perm <- jac.perm
+lf.jac.plot <- rm_legend(jac.plot)
+lf.unif.perm <- unif.perm
+lf.unif.plot <- rm_legend(unif.plot)
+lf.wuf.perm <- wuf.perm
+lf.wuf.plot <- rm_legend(wuf.plot)
+lf.ait.perm <- ait.perm
+lf.ait.plot <- rm_legend(ait.plot)
+
+load("plots/bdiv/timeline/Cecum/PCoA_plot_Cecum.Rdata")
+
+legend <- get_legend(bray.plot)
+
+#remove leftovers
+rm(bray.perm,bray.plot,jac.perm,jac.plot,unif.perm,unif.plot,wuf.perm,wuf.plot,ait.perm,ait.plot)
+
+# Call plots
+p.adiv <- ggarrange(p.obs.8,p.sha.8,p.fpd.8, p.obs.21,p.sha.21,p.fpd.21, 
+                    nrow = 2, ncol = 3,
+                    labels = c("A","","","B","",""),
+                    common.legend = TRUE,
+                    align = "hv",
+                    legend = "top",
+                    font.label = list(size = 24, face = "bold"))
+p.adiv
+
+p.bdiv <- ggarrange(hf.bray.plot, hf.jac.plot, lf.bray.plot, lf.jac.plot,
+                   ncol = 2, nrow = 2,
+                   align = "hv",
+                   label.x = 0,
+                   font.label = list(size = 24, face = "bold"),
+                   labels = c("C","D","E","F"))
+p.bdiv
+
+p.all <- ggarrange(p.adiv, legend, p.bdiv,
+                   ncol = 1, nrow = 3,
+                   heights = c(3,0.5,4))
+p.all
+
+# Save combined graphics
+ggsave(filename = "plots/figures/diversity_cecum_combined_bray_jac.png", p.all, device = "png", dpi = 300, height = 350, width = 350, units = "mm")
+ggsave(filename = "plots/figures/diversity_cecum_combined_bray_jac.pdf", p.all, device = "pdf", dpi = 300, height = 350, width = 350, units = "mm")
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE)[ls(all.names = TRUE) != "params"])
+invisible(gc())
+
+```
+
+# SINGLE ANALYSIS SETUP
+## VISUALIZATION
+
+Beta diversity is generally visualized by a NMDS (non metric multidimensional scaling) or PCoA (Principal Coordinate Analysis) plots. Both methods creates a representation of the beta diversity on few axes (3D plots should only be used for interactive on screen representations).
+
+### LOAD DATA FROM SUBSETS
+First step is to load the data and define the which variable will be tested in the following blocks. Here we use faecal data from day 8 as an example with no feed or treatment subsets.
+
+```{r load-betadiv-a, eval=TRUE, echo=TRUE}
+
+params <- readRDS("R_objects/params_betadiv.RDS")
+load("R_objects/bdiv_bray_Feces.RData")
+# Choose metric
+METRIC <- "bray"
+
+# Choose variable 
+VAR <- "feed_treat"
+MTRL <- "Feces"
+DAY <- "d0"
+FEED <- "All"
+
+# Load data
+if (FEED == "All") {
+  BFILE <- paste0("R_objects/bdiv_sub_",MTRL,"_",DAY,"_",METRIC,".Rdata")
+} else {
+  BFILE <- paste0("R_objects/bdiv_sub_",MTRL,"_",DAY,"_",FEED,"_",METRIC,".Rdata")
+}
+if (METRIC == "unif") {
+  load(BFILE)
+  dist.used <- unif.sub.dist
+  nmds.used <- unif.sub.nmds
+  pcoa.used <- unif.sub.pcoa
+  phy.used <- phy.sub
+  rm(unif.sub.dist, unif.sub.nmds, unif.sub.pcoa, phy.sub)
+} else if (METRIC == "wuf") {
+  load(BFILE)
+  dist.used <- wuf.sub.dist
+  nmds.used <- wuf.sub.nmds
+  pcoa.used <- wuf.sub.pcoa
+  phy.used <- phy.sub
+  rm(wuf.sub.dist, wuf.sub.nmds, wuf.sub.pcoa,phy.sub)
+} else if (METRIC == "bray"){
+  load(BFILE)
+  dist.used <- bray.sub.dist
+  nmds.used <- bray.sub.nmds
+  pcoa.used <- bray.sub.pcoa
+  phy.used <- phy.sub
+  rm(bray.sub.dist, bray.sub.nmds, bray.sub.pcoa, phy.sub)
+} else if (METRIC == "jac"){
+  load(BFILE)
+  dist.used <- jac.sub.dist
+  nmds.used <- jac.sub.nmds
+  pcoa.used <- jac.sub.pcoa
+  phy.used <- phy.sub
+  rm(jac.sub.dist, jac.sub.nmds, jac.sub.pcoa, phy.sub)
+} else if (METRIC == "ait"){
+  load(BFILE)
+  dist.used <- ait.sub.dist
+  nmds.used <- ait.sub.nmds
+  pcoa.used <- ait.sub.pcoa
+  phy.used <- phy.sub
+  rm(ait.sub.dist, ait.sub.nmds, ait.sub.pcoa, phy.sub)
+}
+
+# Extract metadata from phyloseq
+mdat <- data.frame(sample_data(phy.used))
+
+# If a variable consist of numbers, but represent distinct groups remember to make it into a factor
+mdat[,VAR] <- as.factor(mdat[,VAR])
+```
+
+### CLEAN ORDINATION {.tabset .tabset-fade .tabset-pills}
+
+The data from an ordination can be plotted in many different ways. Here I will look at the importance of each axis in the PCoA plot, perform standard 2D-ordination plots, and plot dispersion for each variable.
+
+#### EIGENVALUES
+
+For PCoA each axis represent a specific amount of the overall variation in the dataset. this information can easily be extracted and plotted.
+
+```{r plot-eigenvalues-a, eval=TRUE, echo=TRUE}
+
+# Extract eigen values
+eigen <- pcoa.used$values
+eigen$Axis <- as.numeric(row.names(eigen))
+
+# Create plots for both distance indeces
+p.eigen <- ggplot(eigen[1:10,], aes(x = as.factor(Axis), y = 100*Relative_eig)) + 
+  geom_col(aes(fill = as.factor(Axis))) +
+  geom_point(aes(x = Axis, y = 100*Cum_corr_eig)) +
+  geom_line(aes(x = Axis, y = 100*Cum_corr_eig)) +
+  ylab("Variance explained (%)") +
+  xlab("Axis") +
+  theme_pubr(legend = "none") + ggsci::scale_fill_jco()
+p.eigen + ggtitle(paste("Variance per axis for", METRIC, sep = " "))
+suppressMessages(ggsave(plot = p.eigen, filename = paste0("plots/bdiv/",MTRL,"_",DAY,"/bdiv_PCoA_axis",METRIC,".png"), device = "png"))
+
+```
+
+#### PLOT
+
+Phyloseq has a plotting function, but it is a bit limited in some of the settings. Therefore, I recommend to use the function to create a table of the data and then make your own plots
+The first plot highlights the location of each group on the first 5 axis. Based on this an optimal set of axis can be chosen for the following ordination plot.
+
+```{r ordination-find-axis-a, eval=TRUE}
+# Create plots of eigenvalues for PCoA plots
+pcoa.tab <- plot_ordination(phy.used, pcoa.used,axes = 1:5,justDF = TRUE)
+nmds.tab <- plot_ordination(phy.used, nmds.used,axes = 1:5,justDF = TRUE)
+
+# Reformat tables to create one common table
+colnames(nmds.tab)[1:5] <- c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5")
+
+nmds.tab$ordination <- "nmds"
+pcoa.tab$ordination <- "pcoa"
+
+ord.tab <- rbind(nmds.tab,pcoa.tab)
+ord.tab[,VAR] <- as.factor(ord.tab[,VAR])
+
+# Melt axis to be in one variable
+axis.tab <- pivot_longer(data = ord.tab, cols = c("Axis.1","Axis.2","Axis.3","Axis.4","Axis.5"), names_to = "Axis", values_to = "position")
+
+# Plot positions on axes
+ggplot(axis.tab, aes_string(x = "ordination", y = "position", fill = VAR)) +
+  geom_boxplot() +
+  facet_grid(Axis~.) +
+  coord_flip() + 
+  theme_pubr(legend = "bottom") + scale_fill_manual(values = params$COL)#ggsci::scale_fill_jco()
+```
+
+based on the best separation on the axis in the plot above I have chosen to use Axis 1 and 2 for the ordination
+
+```{r plot-ordination-a, eval=TRUE}
+# Create NMDS plot
+plot.nmds <- ggplot(ord.tab[ord.tab$ordination == "nmds",], aes_string(x = "Axis.1", y = "Axis.2", color = VAR, group = VAR)) +
+  geom_point() + 
+  labs(color=VAR) +
+  theme_pubr(legend = "bottom")+
+  stat_ellipse() + scale_color_manual(values = params$COL)
+plot.nmds1 <- plot.nmds + theme_pubr(legend = "none")
+plot.nmds2 <- ggExtra::ggMarginal(p = plot.nmds1, type = 'boxplot', size = 10, groupFill = TRUE )
+
+# Create PCoA plot
+plot.pcoa <- ggplot(ord.tab[ord.tab$ordination == "pcoa",], aes_string(x = "Axis.1", y = "Axis.2", color = VAR, group = VAR)) +
+  geom_point() + 
+  theme_pubr(legend = "none") + 
+  labs(color=VAR) +
+  stat_ellipse() + scale_color_manual(values = params$COL)
+plot.pcoa2 <- ggExtra::ggMarginal(p = plot.pcoa, type = 'boxplot', size = 10, groupFill = TRUE)
+
+# Extract legend
+plot.legend <- get_legend(plot.nmds)
+
+# Draw plot
+p.done <- ggdraw() + 
+  draw_plot(plot.nmds2, 0, 0.1, 0.5, 0.9) + 
+  draw_plot(plot.pcoa2, 0.5, 0.1, 0.5, 0.9) +
+  draw_grob(plot.legend, 0, 0, 1, .1) +
+  draw_plot_label("NMDS") + 
+  draw_plot_label("PCoA", x = 0.5) + 
+  theme(plot.background = element_rect(fill="white", color = NA))
+
+p.done
+
+# Save plot
+plotfile <- file.path("plots",paste0("bdiv/",MTRL,"_",DAY,"/bdiv_ordination_",VAR,".png"))
+ggsave(filename = plotfile, plot = p.done, width = 14, height = 7,units = "in",dpi = 300)
+
+```
+
+
+## STATISTICAL ANALYSIS
+
+### PERMANOVA
+The more important part of a beta diversity analysis is to determine if there are any statistical significant differences in the data.
+To do this we will perform an **Permutational Multivariate Analysis of Variance Using Distance Matrices** using the vegan function `adonis2`.
+
+`adonis2` is a function for the analysis and partitioning sums of squares using dissimilarities. The function is based on the principles of [McArdle & Anderson (2001)](https://doi.org/10.1890/0012-9658(2001)082[0290:FMMTCD]2.0.CO;2) and can perform sequential, marginal and overall tests. The function also allows using additive constants or squareroot of dissimilarities to avoid negative eigenvalues, but can also handle semimetric indices (such as Bray-Curtis) that produce negative eigenvalues. The `adonis2` tests are identical to `anova.cca` of `dbrda`. With Euclidean distances, the tests are also identical to `anova.cca` of `rda`.
+
+The function partitions sums of squares of a multivariate data set, and they are directly analogous to MANOVA (multivariate analysis of variance). McArdle and Anderson (2001) and [Anderson (2001)](https://doi.org/10.1111/j.1442-9993.2001.01070.pp.x) refer to the method as “permutational MANOVA” (formerly “nonparametric MANOVA”). Further, as the inputs are linear predictors, and a response matrix of an arbitrary number of columns, they are a robust alternative to both parametric MANOVA and to ordination methods for describing how variation is attributed to different experimental treatments or uncontrolled covariates. The method is also analogous to distance-based redundancy analysis in functions `dbrda` and `capscale` [(Legendre and Anderson 1999)](https://doi.org/10.1890/0012-9615(1999)069[0001:DBRATM]2.0.CO;2), and provides an alternative to AMOVA (nested analysis of molecular variance, Excoffier, Smouse, and Quattro, 1992; `amova` in the ade4 package) for both crossed and nested factors.
+
+> Anderson (2001, Fig. 4) warns that the method may confound location and dispersion effects: significant differences may be caused by different within-group variation (dispersion) instead of different mean values of the groups (see [Warton et al. 2012](https://doi.org/10.1111/j.2041-210X.2011.00127.x) for a general analysis). However, it seems that `adonis2` is less sensitive to dispersion effects than some of its alternatives (`anosim`, `mrpp`). Function `betadisper` is a sister function to `adonis2` to study the differences in dispersion within the same geometric framework.
+
+#### DISPERTION
+
+First we will test the beta diversity dispertion to determine whether any differences in dispertion might cause any PERMANOVA differences.
+
+```{r betadisp-a, eval=TRUE}
+
+# Calculate betadispertion
+bdisp <- betadisper(dist.used, mdat[,VAR])
+
+# Run statical test
+anova(bdisp)
+
+# Run posthoc test if significant and more than two groups
+TukeyHSD(bdisp)
+plot(TukeyHSD(bdisp))
+
+# Plot dispertion
+boxplot(bdisp)
+
+```
+
+When plotting the TukeyHSD, the y-axis is terribly formatted, but ordered similarly to the written output.
+
+> Any significant differences will increase the significance of the following PERMANOVA test, which should then be interpreted carefully.
+
+#### RUN TEST
+
+> The formulation of the adonis2 test **MUST** be updated manually!
+
+```{r permanova-a, eval=TRUE}
+
+# Perform test
+if (FEED == "All") {
+  adonis2(dist.used ~ treatment*feed, data = mdat, strata = mdat$day, permutations = 999, na.action = na.omit)
+} else {
+adonis2(dist.used ~ treatment, data = mdat, strata = mdat$day, permutations = 999, na.action = na.omit)
+}
+
+```
+
+### FIT VARIABLES TO ORDINATION
+
+Another way to analyse the beta diversity is to fit the metadata variables to the ordinations, this is done with the \code{vegan} function `envfit`. This function will fit both quantitative and/or qualitative variables to the ordinations
+
+#### CALCULATION
+
+First step is to perform the calculation
+
+```{r envfit-calc-a, eval=TRUE}
+
+# Fit data
+fit.nmds <- envfit(nmds.used ~ dna_conc,mdat, na.rm=TRUE, perm = 999)
+fit.pcoa <- envfit(nmds.used ~ dna_conc,mdat, na.rm=TRUE, perm = 999)
+
+```
+
+#### FORMAT DATA
+
+The `envfit` output is not formatted for ggplot, so we will have to do that ourselves
+
+```{r envfit-format-a,eval=TRUE}
+# Extract nmds arrows
+arrow.nmds <- data.frame(fit.nmds$vectors$arrows)
+colnames(arrow.nmds) <- c("xend","yend")
+arrow.nmds$xend <- with(arrow.nmds, xend*sqrt(fit.nmds$vectors$r)*100)
+arrow.nmds$yend <- with(arrow.nmds, yend*sqrt(fit.nmds$vectors$r)*100)
+
+# Extract pcoa arrows
+arrow.pcoa <- data.frame(fit.pcoa$vectors$arrows)
+colnames(arrow.pcoa) <- c("xend","yend")
+arrow.pcoa$xend <- with(arrow.pcoa, xend*sqrt(fit.pcoa$vectors$r)*100)
+arrow.pcoa$yend <- with(arrow.pcoa, yend*sqrt(fit.pcoa$vectors$r)*100)
+
+# extract nmds centroids
+center.nmds <- as.data.frame(fit.nmds$factors$centroids) %>% 
+  rownames_to_column(var = "treatment") %>% 
+  mutate(treatment = str_remove(treatment, "treatment"), ordination = "nmds")
+colnames(center.nmds) <- c("treatment","center.x","center.y","ordination")
+
+# extract pcoa centroids
+center.pcoa <- as.data.frame(fit.pcoa$factors$centroids) %>%
+  rownames_to_column(var = "treatment") %>% 
+  mutate(treatment = str_remove(treatment, "treatment"), ordination = "pcoa")
+colnames(center.pcoa) <- c("treatment","center.x","center.y","ordination")
+
+# cobine 
+center.dat <- rbind(center.nmds,center.pcoa)
+
+# add data to ord
+ord.tab.2 <- full_join(ord.tab,center.dat)
+
+```
+#### PLOT
+
+With the variables fitted to the ordination, we can now create the plot
+
+```{r envfit-plot-a, eval=TRUE}
+
+# Create NMDS plot
+plot.nmds <- ggplot(ord.tab.2[ord.tab.2$ordination == "nmds",], aes_string(x = "Axis.1", y = "Axis.2", color = VAR)) +
+  geom_point() + 
+  labs(color=VAR) +
+  theme_pubr(legend = "bottom")+
+  geom_segment(aes(xend = center.x,yend = center.y)) +
+  geom_segment(data = arrow.nmds, 
+               aes(x = 0, y = 0, xend = xend, yend = yend, color = NULL), 
+               arrow = arrow(type = "closed", length = unit(0.1, "inches")),
+               show.legend = FALSE) + 
+  geom_text(data = arrow.nmds, 
+            aes(x = xend, y = yend, label = row.names(arrow.nmds), color = NULL), 
+            nudge_x = 2, nudge_y = 2,
+            show.legend = F) +
+  ggsci::scale_color_jco()
+plot.nmds1 <- plot.nmds + theme_pubr(legend = "none")
+plot.nmds2 <- ggExtra::ggMarginal(p = plot.nmds1, type = 'boxplot', size = 10, groupFill = TRUE )
+
+# Create PCoA plot
+plot.pcoa <- ggplot(ord.tab.2[ord.tab.2$ordination == "pcoa",], aes_string(x = "Axis.1", y = "Axis.2", color = VAR)) +
+  geom_point() + 
+  theme_pubr(legend = "none") + 
+  labs(color=VAR) +
+  geom_segment(aes(xend = center.x,yend = center.y)) +
+  geom_segment(aes(x = 0, y = 0, xend = xend, yend = yend, color = NULL), 
+               data = arrow.nmds, 
+               arrow = arrow(type = "closed", length = unit(0.1, "inches")),
+               show.legend = FALSE) + 
+  geom_text(data = arrow.nmds, 
+            aes(x = xend, y = yend, label = row.names(arrow.nmds), color = NULL), 
+            nudge_x = 2, nudge_y = 2,
+            show.legend = F) +
+  #stat_ellipse() + 
+  ggsci::scale_color_jco()
+plot.pcoa2 <- ggExtra::ggMarginal(p = plot.pcoa, type = 'boxplot', size = 10, groupFill = TRUE)
+
+# Draw plot
+p.done <- ggdraw() + 
+  draw_plot(plot.nmds2, 0, 0.1, 0.5, 0.9) + 
+  draw_plot(plot.pcoa2, 0.5, 0.1, 0.5, 0.9) +
+  draw_grob(plot.legend, 0, 0, 1, .1) +
+  draw_plot_label("NMDS") + 
+  draw_plot_label("PCoA", x = 0.5) + 
+  theme(plot.background = element_rect(fill="white", color = NA))
+p.done
+
+# Save plot
+plotfile <- file.path("plots",paste0("bdiv_ordination_annotated_",VAR,".png"))
+ggsave(filename = plotfile, plot = p.done, width = 14, height = 7,units = "in",dpi = 300)
+
+```
+
+
+# SETTINGS {.tabset .tabset-fade .tabset-pills}
+
+Overview of the parameters and packages that were used for this Rmarkdown.
+
+## PARAMETERS
+
+The following paramenters were set in for this analysis:
+
+```{r parameters, eval=TRUE}
+params <- readRDS( "R_objects/params_betadiv.RDS")
+
+
+tmp <- unlist(params)
+dat <- data.frame(Parameter = names(tmp), Value = unname(tmp))
+
+
+kbl(dat, row.names = F) %>% kable_classic(lightable_options = "striped")
+
+```
+
+## SESSION INFO
+
+The analysis was run in the following environment:
+
+```{r packages, eval=TRUE}
+sessionInfo()
+```
