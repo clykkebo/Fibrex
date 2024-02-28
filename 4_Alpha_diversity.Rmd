@@ -115,6 +115,9 @@ adiv_output <- function(INNER.VAR, OUTER.VAR, MTRL, DAY) {
         add_xy_position(x = OUTER.VAR) %>%
         p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
       
+      print(stat.test)
+      print(stat.test2)
+      
       # Adjust y value for outer p-values
       stat.test2$y.position <- max(stat.test$y.position)*1.1
       
@@ -155,8 +158,7 @@ adiv_output <- function(INNER.VAR, OUTER.VAR, MTRL, DAY) {
       
       suppressMessages(ggsave(filename = paste0("plots/adiv/alpha_",DAY,"/adiv_",MTRL,"_",DAY,"_nested.png"), plot = adiv.plot, device = "png", units = "mm", width = 350, height = 100, dpi = 300))
       suppressMessages(ggsave(filename = paste0("plots/adiv/alpha_",DAY,"/adiv_",MTRL,"_",DAY,"_nested.pdf"), plot = adiv.plot, device = "pdf", units = "mm", width = 350, height = 100, dpi = 300))
-      # output <- list(adiv.plot,obs.fit,obs.aov,obs.thsd,eve.fit,eve.aov,eve.thsd,sha.fit,sha.aov,sha.thsd,fph.fit,fph.aov,fph.thsd)
-      # output
+
       return(list(plot = adiv.plot, Observed = obs, Evenness = eve, Shannon = sha, FaithPH = fph))
 }
 
@@ -336,9 +338,8 @@ adiv_day <- function(INNER.VAR, OUTER.VAR, MTRL, DAY) {
   # Add p-values
   p.fpd <- p + stat_pvalue_manual(stat.test, label = "p.adj.format",tip.length = 0, color = "red", hide.ns = TRUE)
   p.fpd <- p.fpd + stat_pvalue_manual(stat.test2, label = "p.adj.format",tip.length = 0, step.increase = 0.1, hide.ns = TRUE)
-  ### Create output plot
-  # filename <- paste0("plots/adiv/alpha_d0/adiv_",var1,"_",var2,"_nested.png")
-  # filename2 <- paste0("plots/adiv/alpha_d0/adiv_",var1,"_",var2,"_nested.pdf")
+
+    ### Create output plot
   adiv.plot <- ggarrange(p.obs,p.eve,p.sha,p.fpd, nrow = 1, labels = c("A)","B)","C)","D)"), common.legend = TRUE,legend = "top")
   adiv.plot
   suppressMessages(ggsave(filename = paste0("plots/adiv/alpha_",DAY,"/adiv_",MTRL,"_",DAY,"_nested.png"), plot = adiv.plot, device = "png", units = "mm", width = 350, height = 100, dpi = 300))
@@ -351,6 +352,9 @@ rm_legend <- function(p){p + theme(legend.position = "none")}
 
 save(adiv_day,adiv_batch_effect,adiv_output, rm_legend, file = "scripts/adiv.Rdata")
 
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE))
+invisible(gc())
 
 ```
 
@@ -359,7 +363,6 @@ save(adiv_day,adiv_batch_effect,adiv_output, rm_legend, file = "scripts/adiv.Rda
 Before testing any of the project specific variables it is important to determine if there is any batch effects that affect the samples (for example extraction batches or sequencing run)
 
 ```{r alpha_div_batch, eval=TRUE}
-
 params <- readRDS("R_objects/Adiv_params.RDS")
 # Load data
 load("R_objects/Phyloseq.Rdata")
@@ -504,11 +507,11 @@ invisible(gc())
 
 Boxplot of the influence of sequencing batches on alpha diversity: ![Batch effects on alpha diversity](plots/adiv_batch.png){width="100%"} Unfortunately, there is a batch effect between c1 and c2-4. This should be kept in mind for further analysis. However, as all batches are randomized across all samples, part of this effect should be equaled out by random dispersion. It is still important that we determine if any tested variables are independent of the batches or if there is an interaction.
 
-# CATEGORICAL VARIABLES EFFECTS {.tabset .tabset-fade .tabset-pills}
+# CATEGORICAL VARIABLES EFFECTS 
 
 Keeping in mind possible batch effects, now we can test for project effects. Depending on the project it might be best to test each variable individually or to perform a nested test of the variables. It is important to ensure that R has interpreted the selected variable as a factor, character variables will automatically be interpreted as factors, but variables that consists solely of numbers (numerical or integers) is interpreted as continuous by R and must be transformed to be factors.
 
-## Diversity per day (NESTED)
+## Diversity per day (NESTED){.tabset .tabset-fade .tabset-pills}
 Here we aim to look at diversity differences in each material on each day (0, 8, 12, 16 and 21).
 
 ### Feces day 0
@@ -744,8 +747,10 @@ invisible(gc())
 ```
 
 
-## Diversity plot with rats group-wise over time
+## Diversity plot with rats group-wise over time {.tabset .tabset-fade .tabset-pills}
 Here we look at all data in one figure per metric. The first code-chunk is processing data and analysing which statistical analysis to use for each metric. The plots contain longitudinal faecal data from each rat along with summary of each treatment group per day as boxplots.
+
+### Prepare data
 ```{r adiv_figure_over_time, eval=TRUE, echo=TRUE}
 params <- readRDS("R_objects/Adiv_params.RDS")
 
@@ -823,7 +828,7 @@ print(paste0("Equal variance for ",OUTCOME," = ",EQUAL.VAR))
 }
 
 ```
-###Statistics and figure
+### Statistics and figure
 Due to low sample count from day 12 and on (group n = 6) we will compare based on non-parametric Kruskal-Wallis with post hoc Dunn's test. Comparison between diets on each day is done using non-parametric t-test (Wilcoxon).
 ``` {r }
 # Run statistics and create plots for all metrices in OCS

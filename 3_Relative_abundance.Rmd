@@ -19,6 +19,8 @@ params:
     group_var: "feed_treat"
     subject_var: "rat_name"
     time_var: "day"
+    COL: !r c("LF_CTRL" = "#a5cee3","LF_PFOS" = "#1778b6","HF_CTRL" = "#b4d88a","HF_PFOS" = "#30a148")
+    COLFEED: !r c("LF" = "#1778b6","HF" = "#30a148")
 ---
 
 # INFO
@@ -41,6 +43,13 @@ library(GMHmicrobiome)
 library(ggpubr)
 library(kableExtra)
 library(phyloseq)
+library(tidyverse)
+library(decontam)
+library(pals)
+library(rstatix)
+library(vegan)
+library(reshape2)
+library(ape)
 
 # save parameters
 saveRDS(params, "R_objects/params_description.RDS")
@@ -1518,6 +1527,8 @@ p.fig <- p + theme_pubr(legend = "right", border = TRUE) + theme(axis.text.x = e
 if (!file.exists(paste0("plots/relative_abundance"))) dir.create(file.path(getwd(), paste0("plots/relative_abundance")))
 ggsave(filename = "plots/figures/Genus_abundance_faeces.png", plot = p.fig, device = "png", units = "mm", width = 300, height = 185, dpi = 300)
 ggsave(filename = "plots/figures/Genus_abundance_faeces.pdf", plot = p.fig, device = "pdf", units = "mm", width = 300, height = 185, dpi = 300)
+ggsave(filename = "plots/figures/final_figures_Appendix/Figure A.6.png", plot = p.fig, device = "png", units = "mm", width = 300, height = 185, dpi = 300)
+ggsave(filename = "plots/figures/final_figures_Appendix/Figure A.6.pdf", plot = p.fig, device = "pdf", units = "mm", width = 300, height = 185, dpi = 300)
 
 # print tax table
 tax <- dat.sort %>% distinct(Taxa,.keep_all = T) %>% select(Taxa, Kingdom, Phylum, Class, Order,Family,Genus)  %>% arrange(Taxa)
@@ -4723,12 +4734,160 @@ invisible(gc())
 ```
 
 # SPECIAL FIGURES FOR ARTICLE
-## Figure A.4: PHYLA {.tabset .tabset-dropdown}
+## Figure A.5: PHYLA {.tabset .tabset-dropdown}
+### Prep data
+```{r}
+# load data 
+load("R_objects/Agglomerated.RData")
+rm(phy.sp, phy.ge, phy.fa, phy.or, phy.cl)
+params <- readRDS("R_objects/params_description.RDS")
+LIST.DAY <- c("d0","d08","d12","d16","d21", "all")
+DIETS <- c("HF","LF")
+LIST.TR <- c("CTRL","PFOS", "both")
+LVL <- "Phylum"
+
+# Prepare dataframe
+df <- data.frame()
+
+# Run calculations
+suppressMessages({suppressWarnings({
+for (DIET in DIETS) {
+  #print(DIET)
+  load("R_objects/Agglomerated.RData")
+  phy.feed <- phy.ph
+  phy.feed <- subset_samples(phy.feed, feed == DIET)
+  
+  for (DAY in LIST.DAY) {
+    if (DAY == "all") {
+      print("## All days selected")
+      phy.day <- phy.feed
+    } else {
+      print(paste0("## Day ",DAY," selected"))
+      phy.day <- subset_samples(phy.feed, day == DAY)
+    }
+    
+    for (TR in LIST.TR) {
+      if (TR == "both") {
+        # print("## Both treatment groups selected")
+        phy.tr <- phy.day
+      } else {
+        # print(paste0("## Treatment ",TR," selected"))
+        phy.tr <- subset_samples(phy.day, treatment == TR)
+      }
+      # Transform data
+      phy.rel <- transform_sample_counts(phy.tr, fun = function(x) x/sum(x)*100)
+      dat <- psmelt(phy.rel)
+      
+      # Filter by abundance, then rank
+      phy.top <- filter_abundance(phy.rel) %>% filter_rank(min.rank = 19)
+      
+      #Melt data
+      dat <- suppressWarnings(psmelt(phy.top))
+      
+      # Prevent duplicate column names
+      colnames(dat)[colnames(dat) %in% c("Taxa","SampleID")] <- paste(colnames(dat)[colnames(dat) %in% c("Taxa","SampleID")], "old", sep = "_")
+      
+      # Rename relevant columns
+      colnames(dat)[c(1,4)] <- c("Taxa","SampleID")
+      
+      # Sort taxa
+      dat.sort <- sort_taxa(dat) 
+      
+      # rename taxa
+      levels(dat.sort$Taxa) <- LETTERS[seq(length(levels(dat.sort$Taxa)))]
+      
+      # print tax table
+      tax <- dat.sort %>% group_by(Taxa, Kingdom, Phylum) %>% summarise(Abundance = mean(Abundance))
+      
+      # Bacteroidetes-Firmicutes ratio
+      Ba <- subset(tax, Phylum == "Bacteroidetes")
+      Fi <- subset(tax, Phylum == "Firmicutes")
+      Pb <- subset(tax, Phylum == "Proteobacteria")
+      if (nrow(Pb) == 0) {
+        print(paste0("Zero Preoteobacteria in ",DIET," ",DAY," ",TR))
+        df_0 <- c("D","Bacteria","Proteobacteria",0)
+        Pb <- data.frame()
+        Pb <- rbind(Pb,df_0)
+        colnames(Pb) <- c("Taxa","Kingdom","Phylum","Abundance")
+        Pb <- transform(Pb, Abundance = as.numeric(Abundance))
+        } else {}
+      Ac <- subset(tax, Phylum == "Actinobacteria")
+      if (nrow(Ac) == 0) {
+        print(paste0("Zero Actinobacteria in ",DIET," ",DAY," ",TR))
+        df_0 <- c("A","Bacteria","Actinobacteria",0)
+        Ac <- data.frame()
+        Ac <- rbind(Ac,df_0)
+        colnames(Ac) <- c("Taxa","Kingdom","Phylum","Abundance")
+        Ac <- transform(Ac, Abundance = as.numeric(Abundance))
+        } else {}
+      OT_FB <- 100 - (round(Fi$Abundance,3) + round(Ba$Abundance,3))
+      OT_ALL <- 100 - (round(Fi$Abundance,3) + round(Ba$Abundance,3) + round(Pb$Abundance,3) + round(Ac$Abundance,3))
+      FBR <- Fi$Abundance / Ba$Abundance 
+      
+      output <- c(DIET, DAY, TR, paste0(DIET,"_",TR), round(Fi$Abundance,3), round(Ba$Abundance,3),round(Pb$Abundance,3),round(Ac$Abundance,3), OT_FB, OT_ALL, FBR) #round(Ab$Abundance,3),
+      
+      df <- rbind(df, output)
+      
+    }
+  }
+}
+ })})
+
+# Names columns
+colnames(df) <- c("feed","day","treatment","feed_treat",
+                  "Firmicutes","Bacteroidetes","Proteobacteria","Actinobacteria","Others_FB","Others_all","FB_ratio")
+df
+df <- transform(df, Firmicutes = as.numeric(Firmicutes),
+                Bacteroidetes = as.numeric(Bacteroidetes),
+                Proteobacteria = as.numeric(Proteobacteria),
+                Actinobacteria = as.numeric(Actinobacteria),
+                Others_FB = as.numeric(Others_FB),
+                Others_all = as.numeric(Others_all),
+                FB_ratio = as.numeric(FB_ratio))
+df
+write.csv(df, file = "plots/relative_abundance/Phyla_relative_abundance.csv")
+
+# Prepare Firmicutes and Bacteroidetes for plotting
+df.fb <- pivot_longer(df, cols = c(Firmicutes, Bacteroidetes, Others_FB), names_to = "Phylum", values_to = "Abundance")
+df.fb <- subset(df.fb, treatment != "both" & day != "all")
+df.fb
+
+# Plot Firmicutes + Bacteroidetes
+p <- ggplot(df.fb, aes(fill = Phylum, y = Abundance, x = feed)) +
+  geom_bar(position = "fill", stat = "identity") +
+  facet_grid(treatment ~ day, labeller = labeller(day = c("d0" = "Day 0","d08" = "Day 8","d12" = "Day 12","d16" = "Day 16","d21" = "Day 21"))) +
+  geom_text(aes(label = paste0(round(Abundance,2),"%")), position = position_fill(vjust = 0.5), size = 3, color = "#222222") +
+  ggsci::scale_fill_d3(palette = "category20", name = "Phylum", labels = c("Others_FB" = "Others")) +
+  scale_y_continuous(labels = function(x) paste0(x*100, "%"), name = "Relative Abundance") +
+  theme_pubr(legend = "top", border = TRUE) +
+  theme(axis.title.x = element_blank())
+
+p
+
+ggsave(filename = "plots/relative_abundance/Firmicutes-Bacteroidetes-ratios.png", plot = p, device = "png", unit = "mm", dpi = 300, height = 150, width = 200)
+ggsave(filename = "plots/relative_abundance/Firmicutes-Bacteroidetes-ratios.pdf", plot = p, device = "pdf", unit = "mm", dpi = 300, height = 150, width = 200)
+
+# Prepare All for plotting
+df.all <- pivot_longer(df, cols = c(Firmicutes, Bacteroidetes, Proteobacteria, Actinobacteria, Others_all), names_to = "Phylum", values_to = "Abundance")
+df.both <- subset(df.all, treatment == "both" & day != "all")
+df.both
+df.all <- subset(df.all, treatment != "both" & day != "all")
+df.all
+
+l <- c("Firmicutes", "Bacteroidetes", "Proteobacteria", "Actinobacteria", "Others_all")
+
+df.all$Phylum <- factor(df.all$Phylum, levels = c(l))
+
+if (!file.exists("plots/figures/objects")) dir.create(file.path(getwd(), "plots/figures/objects"))
+save(df,df.fb,df.all,df.both, file = "plots/figures/objects/phyla_means.Rdata")
+
+```
 
 The following section compare relative abundances and the ratio between Firmicutes and Bacteroidetes in data daily and in respect to factors such as HF/LF feed and PFOS exposure. 
 
+### Create figure A.5
 ```{r}
-# load data 
+# load data
 load("R_objects/Agglomerated.RData")
 load("plots/figures/objects/phyla_means.Rdata")
 params <- readRDS("R_objects/params_description.RDS")
@@ -4754,7 +4913,7 @@ colnames(dat)[colnames(dat) %in% c("Taxa","SampleID")] <- paste(colnames(dat)[co
 colnames(dat)[c(1,4)] <- c("Taxa","SampleID")
 
 # Sort taxa
-dat.sort <- sort_taxa(dat) 
+dat.sort <- sort_taxa(dat)
 
 # # rename taxa
 levels(dat.sort$Taxa) <- LETTERS[seq(length(levels(dat.sort$Taxa)))]
@@ -4787,8 +4946,8 @@ FORMULA <- as.formula(paste(OUTCOME,PREDICTOR.F, sep = " ~ "))
 dat.used %>% group_by(across(all_of(PREDICTOR))) %>% get_summary_stats(!!sym(OUTCOME), type = "mean_sd")
 
 # Test for outliers
-dat.used %>% 
-  group_by(across(all_of(PREDICTOR))) %>% 
+dat.used %>%
+  group_by(across(all_of(PREDICTOR))) %>%
   identify_outliers(!!sym(OUTCOME))
 
 # Check normality
@@ -4851,14 +5010,14 @@ p.pfos <- ggplot(dat.used) +
 p.pfos
 
 p.done <- p.pfos + stat_pvalue_manual(stat.in, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, color = "red", coord.flip = TRUE) +
-  stat_pvalue_manual(stat.out2, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, y.position = c(75,85,75), coord.flip = TRUE) +
+  stat_pvalue_manual(stat.out2, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, coord.flip = TRUE) +
   scale_y_continuous(labels = function(x) paste0(x, "%"), name = "Relative Abundance", limits = c(0,100))
 p.done
 
 ggsave(filename = "plots/relative_abundance/Firmicutes_Bacteroidetes_relative_abundance.png", plot = p.done, device = "png", unit = "mm", dpi = 300, height = 150, width = 200)
 ggsave(filename = "plots/relative_abundance/Firmicutes_Bacteroidetes_relative_abundance.pdf", plot = p.done, device = "pdf", unit = "mm", dpi = 300, height = 150, width = 200)
 
-# Plot for comparing group comaprison
+# Plot for comparing group comparison
 # Statistics costumed for facet plotting
 stat.in1 <- dat.used %>%
   group_by(feed_treat, Phylum) %>%
@@ -4893,12 +5052,12 @@ p.group <- ggplot(dat.used) +
   guides(color = "none", alpha = "none")
 p.group
 
-p.stat <- p.group + stat_pvalue_manual(stat.in2, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, coord.flip = TRUE, y.position = c(80,80)) +
+p.stat <- p.group + stat_pvalue_manual(stat.in2, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, coord.flip = TRUE) +
   scale_y_continuous(labels = function(x) paste0(x, "%"), name = "Relative Abundance", limits = c(0,100))
 p.stat
 
-ggsave(filename = "plots/figures/SUP_Figure A4 -Firmicutes_Bacteroidetes_relative_abundance_group.png", plot = p.stat, device = "png", unit = "mm", dpi = 300, height = 150, width = 200)
-ggsave(filename = "plots/figures/SUP_Figure A4 -Firmicutes_Bacteroidetes_relative_abundance_group.pdf", plot = p.stat, device = "pdf", unit = "mm", dpi = 300, height = 150, width = 200)
+ggsave(filename = "plots/figures/SUP_Figure A4 - Firmicutes_Bacteroidetes_relative_abundance_group.png", plot = p.stat, device = "png", unit = "mm", dpi = 300, height = 150, width = 200)
+ggsave(filename = "plots/figures/SUP_Figure A4 - Firmicutes_Bacteroidetes_relative_abundance_group.pdf", plot = p.stat, device = "pdf", unit = "mm", dpi = 300, height = 150, width = 200)
 
 # kable(tax,digits = 2,caption = paste("Taxa plotted", sep = " ")) %>%
 #   kable_classic(full_width = F, position = "left")
@@ -4906,6 +5065,270 @@ ggsave(filename = "plots/figures/SUP_Figure A4 -Firmicutes_Bacteroidetes_relativ
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+### Create Figure A.5 with supplements
+```{r}
+load("R_objects/Agglomerated.RData")
+load("plots/figures/objects/phyla_means.Rdata")
+params <- readRDS("R_objects/params_description.RDS")
+LVL <- "Phylum"
+phy.used <- phy.ph
+
+# Transform data
+phy.rel <- transform_sample_counts(phy.used, fun = function(x) x/sum(x)*100)
+dat <- psmelt(phy.rel)
+
+# Filter by abundance, then rank
+phy.top <- filter_abundance(phy.rel) %>% filter_rank(min.rank = 19)
+
+#Melt data
+dat <- suppressWarnings(psmelt(phy.top))
+
+# Prevent duplicate column names
+colnames(dat)[colnames(dat) %in% c("Taxa","SampleID")] <- paste(colnames(dat)[colnames(dat) %in% c("Taxa","SampleID")], "old", sep = "_")
+
+# Rename relevant columns
+colnames(dat)[c(1,4)] <- c("Taxa","SampleID")
+
+# Sort taxa
+dat.sort <- sort_taxa(dat) 
+
+# # rename taxa
+levels(dat.sort$Taxa) <- LETTERS[seq(length(levels(dat.sort$Taxa)))]
+
+# print tax table
+tax <- dat.sort %>% group_by(Taxa, Kingdom, Phylum, day, feed) %>% summarise(Abundance = mean(Abundance))
+
+tax <- subset(tax, Phylum %in% c("Firmicutes", "Bacteroidetes", "Proteobacteria"))
+
+# Subset to phyla and order
+dat.used <- subset(dat.sort, Phylum %in% c("Firmicutes", "Bacteroidetes", "Proteobacteria"))
+df.all <- subset(df.all, Phylum %in% c("Firmicutes", "Bacteroidetes", "Proteobacteria"))
+l <- c("Firmicutes", "Bacteroidetes", "Proteobacteria", "Actinobacteria","Others")
+d <- c("d21","d16","d12","d08","d0")
+
+dat.used$Phylum <- factor(dat.used$Phylum, levels = c(l))
+dat.used$day <- factor(dat.used$day, levels = c(d))
+
+df.all$Phylum <- factor(df.all$Phylum, levels = c(l))
+df.all$day <- factor(df.all$day, levels = c(d))
+
+tax$Phylum <- factor(tax$Phylum, levels = c(l))
+tax$day <- factor(tax$day, levels = c(d))
+
+# Set parameters
+PREDICTOR <- c("feed","day","Phylum")
+OUTCOME <- "Abundance"
+SUBJECT <- "rat_name"
+
+# Create formula
+PREDICTOR.F <- ifelse(length(PREDICTOR) > 1, paste(PREDICTOR, collapse = "*"), PREDICTOR)
+FORMULA <- as.formula(paste(OUTCOME,PREDICTOR.F, sep = " ~ "))
+
+# Summary samples in groups
+dat.used %>% group_by(across(all_of(PREDICTOR))) %>% get_summary_stats(!!sym(OUTCOME), type = "mean_sd")
+
+# Test for outliers
+dat.used %>%
+  group_by(across(all_of(PREDICTOR))) %>%
+  identify_outliers(!!sym(OUTCOME))
+
+# Check normality
+# Build the linear model
+model  <- lm(FORMULA, data = dat.used)
+# Create a QQ plot of residuals
+ggqqplot(residuals(model))
+
+#Check for variance homogeneity
+# Compute Shapiro-Wilk test of normality
+shapiro_test(residuals(model))
+dat.used %>% levene_test(FORMULA)
+
+# Save result
+EQUAL.VAR <- dat.used %>% levene_test(FORMULA) %>% pull(p) > 0.05
+
+## Abundance data is not normally distributed and does not have equal variance
+## We use Wilcoxon and Kruskal-Wallis
+
+# Plot for comparing diet influence
+# Statistics costumed for facet plotting
+stat.in <- dat.used %>%
+  group_by(day,Phylum) %>%
+  wilcox_test(as.formula("Abundance ~ feed")) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance() %>%
+  add_xy_position(x = "day", dodge = 0.8) %>%
+  p_format("p.adj", accuracy = 0.001, trailing.zero = TRUE, new.col = TRUE)
+stat.in
+
+stat.out <- dat.used %>%
+  group_by(Phylum) %>%
+  kruskal_test(as.formula("Abundance ~ day")) %>%
+  add_significance() %>%
+  p_format("p", accuracy = 0.001, trailing.zero = TRUE, new.col = TRUE)
+stat.out
+
+stat.out2 <- dat.used %>%
+  group_by(Phylum) %>%
+  dunn_test(as.formula("Abundance ~ day"), p.adjust.method = "fdr") %>%
+  add_significance() %>%
+  add_xy_position(x = "day") %>%
+  p_format("p.adj", accuracy = 0.001, trailing.zero = TRUE, new.col = TRUE)
+stat.out2
+
+dat.used$feed <- factor(as.character(dat.used$feed))
+
+df.both <- subset(df.both, Phylum %in% c("Firmicutes", "Bacteroidetes", "Proteobacteria"))
+df.both$Phylum <- factor(df.both$Phylum, levels = c(l))
+df.both$day <- factor(df.both$day, levels = c(d))
+
+df.both
+
+# Plot check PFOS
+p.feed <- ggplot(dat.used, aes()) +
+  geom_bar(data = df.both, aes(fill = fct_rev(feed), y = Abundance, x = day), stat = "identity", position = position_dodge()) +
+  geom_point(data = dat.used, aes(x = day, y = Abundance, color = fct_rev(feed)), position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), size = 0.5, alpha = 0.5) +
+  facet_grid(Phylum ~ .) +
+  geom_text(data = df.both, aes(label = paste0(round(Abundance,1),"%"), x = day, y = Abundance+1, group = fct_rev(feed)), position = position_dodge(width = 0.9), size = 3, hjust = 0) +
+  coord_flip() +
+  scale_fill_manual(values = params$COLFEED, name = "Group")+
+  scale_color_manual(values = c("LF" = "#1748b6","HF" = "#306148")) +
+  theme_pubr(legend = "top", border = TRUE) +
+  scale_x_discrete(name = "Day", labels = c("d0" = "Day 0","d08" = "Day 8","d12" = "Day 12","d16" = "Day 16","d21" = "Day 21")) +
+  theme(axis.title.y = element_blank()) +
+  guides(color = "none")
+p.feed
+
+p.done <- p.feed + stat_pvalue_manual(stat.in, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, color = "red", coord.flip = TRUE, y.position = c(80.6,55.4,14.1,86.3,57.4,13.5,14.7,74.5,61.7,15.9,75.9,76.1,12.8)) +
+  stat_pvalue_manual(stat.out2, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, coord.flip = TRUE, y.position = c(20)) +
+  scale_y_continuous(labels = function(x) paste0(x, "%"), name = "Relative Abundance", limits = c(0,100), expand = c(0.01,0.01))
+p.done
+
+ggsave(filename = "plots/relative_abundance/Major_phyla_abundance.png", plot = p.done, device = "png", unit = "mm", dpi = 300, height = 200, width = 200)
+ggsave(filename = "plots/relative_abundance/Major_phyla_abundance.pdf", plot = p.done, device = "pdf", unit = "mm", dpi = 300, height = 200, width = 200)
+
+# Plot for comparing treatment influence
+# Statistics costumed for facet plotting
+df.all <- subset(df.all, Phylum %in% c("Firmicutes", "Bacteroidetes", "Proteobacteria"))
+df.all$Phylum <- factor(df.all$Phylum, levels = c(l))
+df.all$day <- factor(df.all$day, levels = c(d))
+dat.used$day <- factor(dat.used$day, levels = c(d))
+dat.used$feed <- factor(dat.used$feed, levels = c("LF","HF"))
+df.all$feed <- factor(df.all$feed, levels = c("LF","HF"))
+
+stat.in_2 <- dat.used %>%
+  group_by(feed,day,Phylum) %>%
+  wilcox_test(as.formula("Abundance ~ feed_treat")) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance() %>%
+  add_xy_position(x = "feed", dodge = 0.8) %>%
+  p_format("p.adj", accuracy = 0.001, trailing.zero = TRUE, new.col = TRUE)
+stat.in_2
+
+stat.out_2 <- dat.used %>%
+  group_by(day,Phylum) %>%
+  wilcox_test(as.formula("Abundance ~ feed")) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance() %>%
+  add_xy_position(x = "feed", dodge = 0.8) %>%
+  p_format("p.adj", accuracy = 0.001, trailing.zero = TRUE, new.col = TRUE)
+stat.out_2
+
+dat.used$feed_treat <- factor(as.character(dat.used$feed_treat))
+
+d <- c("d0","d08","d12","d16","d21")
+
+df.all <- subset(df.all, Phylum %in% c("Firmicutes", "Bacteroidetes", "Proteobacteria"))
+df.all$Phylum <- factor(df.all$Phylum, levels = c(l))
+df.all$day <- factor(df.all$day, levels = c(d))
+dat.used$day <- factor(dat.used$day, levels = c(d))
+dat.used$feed <- factor(dat.used$feed, levels = c("LF","HF"))
+df.all$feed <- factor(df.all$feed, levels = c("LF","HF"))
+
+p.fig <- ggplot(dat.used) +
+  geom_bar(data = df.all, aes(fill = fct_rev(feed_treat), y = Abundance, x = feed), stat = "identity", position = position_dodge()) +
+  geom_point(data = dat.used, aes(x = feed, y = Abundance, color = fct_rev(feed_treat)), position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), size = 0.5, alpha = 0.5) +
+  geom_text(data = df.all, aes(label = paste0(round(Abundance,1),"%"), x = feed, y = ifelse(Abundance<25, Abundance+15, Abundance/2), group = fct_rev(feed_treat)), position = position_dodge(width = 0.9), size = 3, hjust = 0.5) +
+  facet_grid(Phylum ~ day, labeller = labeller(day = c("d0" = "Day 0","d08" = "Day 8","d12" = "Day 12","d16" = "Day 16","d21" = "Day 21"))) +
+  coord_flip() +
+  scale_fill_manual(values = params$COL, name = "", labels = c("LF_CTRL" = "LF-CTRL","LF_PFOS" = "LF-PFOS","HF_CTRL" = "HF-CTRL","HF_PFOS" = "HF-PFOS"), breaks = c("HF_CTRL", "HF_PFOS","LF_CTRL","LF_PFOS")) +
+  scale_color_manual(values = c("LF_CTRL" = "#1778b6","LF_PFOS" = "#1748b6","HF_CTRL" = "#84b559","HF_PFOS" = "#306148")) +
+  theme_pubr(legend = "top", border = TRUE) +
+  scale_x_discrete(name = "Feed") +
+  theme(axis.title.y = element_blank(),
+        axis.text.x = element_text(size = 10, angle = 90, vjust = 0.5, hjust = 1)) +
+  guides(color = "none")
+p.fig
+
+p.fig1 <- p.fig + stat_pvalue_manual(stat.in_2, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, color = "red", coord.flip = TRUE) +
+  stat_pvalue_manual(stat.out_2, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, coord.flip = TRUE, y.position = c(80,80,45,90,70,45,45,90,70,45,90,75,45)) +
+  scale_y_continuous(labels = function(x) paste0(x, "%"), name = "Relative Abundance", limits = c(0,100), expand = c(0.025,0.025))
+p.fig1
+
+ggsave(filename = "plots/relative_abundance/SUP_-_Figure_A4_Major_phyla_abundance_by_day.png", plot = p.fig1, device = "png", unit = "mm", dpi = 300, height = 150, width = 200)
+ggsave(filename = "plots/relative_abundance/SUP_-_Figure_A4_Major_phyla_abundance_by_day.pdf", plot = p.fig1, device = "pdf", unit = "mm", dpi = 300, height = 150, width = 200)
+
+
+## SUPPLEMENTING FIGURE FOR PFOS EFFECT ON ABUNDANCES FOPR ALL DATA EXCLUDING DAY 0
+
+dat.1 <- subset(dat.used, day != "d0")
+df.1 <- subset(df.all, day != "d0")
+dat.1$feed <- factor(dat.1$feed, levels = c("LF","HF"))
+df.1$feed <- factor(df.1$feed, levels = c("LF","HF"))
+
+stat.in_3 <- dat.used %>%
+  group_by(feed,Phylum) %>%
+  wilcox_test(as.formula("Abundance ~ feed_treat")) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance() %>%
+  add_xy_position(x = "feed", dodge = 0.8) %>%
+  p_format("p.adj", accuracy = 0.001, trailing.zero = TRUE, new.col = TRUE)
+stat.in_3
+
+stat.out_3 <- dat.used %>%
+  group_by(Phylum) %>%
+  wilcox_test(as.formula("Abundance ~ feed")) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance() %>%
+  add_xy_position(x = "feed", dodge = 0.8) %>%
+  p_format("p.adj", accuracy = 0.001, trailing.zero = TRUE, new.col = TRUE)
+stat.out_3
+
+p.all <- ggplot(dat.1) +
+  geom_bar(data = df.1, aes(fill = fct_rev(feed_treat), y = Abundance, x = feed), stat = "identity", position = position_dodge()) +
+  geom_point(data = dat.1, aes(x = feed, y = Abundance, color = fct_rev(feed_treat)), position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), size = 0.5, alpha = 0.5) +
+  # geom_text(data = df.all, aes(label = paste0(round(Abundance,1),"%"), x = feed, y = ifelse(Abundance<25, Abundance+15, Abundance/2), group = fct_rev(feed_treat)), position = position_dodge(width = 0.9), size = 3, hjust = 0.5) +
+  facet_grid(Phylum ~ .) +
+  coord_flip() +
+  scale_fill_manual(values = params$COL, name = "All data (Day 8 - 21)", labels = c("LF_CTRL" = "LF-CTRL","LF_PFOS" = "LF-PFOS","HF_CTRL" = "HF-CTRL","HF_PFOS" = "HF-PFOS"), breaks = c("HF_CTRL", "HF_PFOS","LF_CTRL","LF_PFOS"))+
+  scale_color_manual(values = c("LF_CTRL" = "#1778b6","LF_PFOS" = "#1748b6","HF_CTRL" = "#84b559","HF_PFOS" = "#306148")) +
+  theme_pubr(legend = "top", border = TRUE) +
+  scale_x_discrete(name = "Feed") +
+  theme(axis.title.y = element_blank()) +
+  guides(color = "none")
+
+p.fig2 <- p.all+ stat_pvalue_manual(stat.in_3, label = "p.adj.format", tip.length = 0, hide.ns = FALSE, color = "red", coord.flip = TRUE, y.position = c(85,60,15,80,65,10)) +
+  stat_pvalue_manual(stat.out_3, label = "p.adj.signif", tip.length = 0, hide.ns = TRUE, coord.flip = TRUE, y.position = c(90,70,20)) +
+  scale_y_continuous(labels = function(x) paste0(x, "%"), name = "Relative Abundance", limits = c(0,100), expand = c(0.01,0.01))
+p.fig2
+
+ggsave(filename = "plots/relative_abundance/Excluding_D0_phyla_abundance_all.png", plot = p.fig2, device = "png", unit = "mm", dpi = 300, height = 100, width = 200)
+ggsave(filename = "plots/relative_abundance/Excluding_D0_phyla_abundance_all.pdf", plot = p.fig2, device = "pdf", unit = "mm", dpi = 300, height = 100, width = 200)
+
+p.final <- ggarrange(p.fig1, p.fig2, 
+                     ncol = 1, nrow = 2, 
+                     common.legend = TRUE, 
+                     heights = c(4,3), 
+                     labels = c("A","B"))
+p.final
+
+ggsave(filename = "plots/figures/final_figures_Appendix/Figure A.5.png", plot = p.final, device = "png", unit = "mm", dpi = 300, height = 220, width = 200)
+ggsave(filename = "plots/figures/final_figures_Appendix/Figure A.5.pdf", plot = p.final, device = "pdf", unit = "mm", dpi = 300, height = 220, width = 200)
+
+
+```
+
+
+
 
 ## Figure A.X: PHYLA {.tabset .tabset-dropdown}
 

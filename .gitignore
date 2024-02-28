@@ -1,4 +1,3 @@
-data/
 # History files
 .Rhistory
 .Rapp.history
@@ -8,6 +7,7 @@ data/
 
 # User-specific files
 .Ruserdata
+.Rproj.user/
 
 # Example code in package build process
 *-Ex.R
@@ -45,3 +45,6 @@ tables/
 scripts/
 backup_041223/
 plots/old/
+
+# Github resources
+.gitignore
