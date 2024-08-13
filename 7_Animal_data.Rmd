@@ -16,6 +16,7 @@ knit: (function(inputFile, encoding) {
     })
 params:
     input: "input/fibrex_data_R.csv"
+    isomer_data: "input/pfos_isomer_data.csv"
     COL0: !r c("CTRL" = "#eeeeee","PFOS" = "#666666")
     COL1: !r c("LF_CTRL" = "#a5cee3","LF_PFOS" = "#1778b6","HF_CTRL" = "#b4d88a","HF_PFOS" = "#30a148")
     COL2: !r c("LF_CTRL_d8" = "#a5cee3","LF_CTRL_d21" = "#a5cee3","LF_PFOS_d8" = "#1778b6","LF_PFOS_d21" = "#1778b6","HF_CTRL_d8" = "#b4d88a","HF_CTRL_d21" = "#b4d88a","HF_PFOS_d8" = "#30a148","HF_PFOS_d21" = "#30a148")
@@ -85,7 +86,6 @@ This document contains the commands necessary to analyse experimental data obtai
     + Upper and lower jejunum
     + Ileum
     + Cecum
-  
 
 ## CONTENT
 
@@ -124,12 +124,10 @@ The project data contains:
     + Feces values for day *8*, *12*, *16*, and *21*
     + Urine values for day *8*, *16*, and *21*
     
-  
-
 - **pH measurements** of gastrointestinal contents by 4x dilution (wt/vol) in sterile nuclease-free water:
   + Upper and lower jejunum
   + Ileum
-  + Cecum (except *R04*)
+  + Cecum (except sample *R04*)
 
 - **Short-chain fatty acids** quantification of 10 compounds in cecal water from day *8* and *21* given in mM:
   + formic acid (formate),
@@ -2780,7 +2778,10 @@ rm(list = ls(all.names = TRUE)[ls(all.names = TRUE) != "params"])
 invisible(gc())
 
 ```
+
+
 ## FIGURE 4 - PFOS concentrations 
+The following contains the code for creating the overall content for Figure 4 for the article. This PDF-output is further processed in vector graphics software to add ANOVA results to panel D.
 
 ### Create figure
 ```{r}
@@ -2838,10 +2839,10 @@ In this section we investigate branched (br-PFOS) and linear PFOS (l-PFOS) expre
 Factors that will be investigated are each sample type (material: *"Serum"*, *"Liver"*, *"Brain"*, *"Feces"*, *"Cecum"*, *"Urine"*), day of sampling (differs between sample type but generally, day: *"d08"*, *"d12"*, *"d16"*, *"d21"*), feeding groups (feed: *"LF"*,*"HF"*) and level of br-PFOS % between samples and compound controls (*"posctrl"*).
 
 ## Import data
-Data is imported from CSV format. br-PFOS % were calculated by **[br-PFOS] / [total PFOS] * 100**.
+Data is imported from CSV format. br-PFOS % is calculated by **[br-PFOS] / [total PFOS] * 100**.
 ```{r , eval=TRUE, echo=TRUE, error=TRUE}
 # Load analysis data
-dat <- read.csv("input/pfos_isomer_data.csv", header = TRUE, sep = ";", dec = ",")
+dat <- read.csv(params$isomer_data, header = TRUE, sep = ";", dec = ",")
 
 #Add additional metadata + calculate br_pct (br-PFOS percentage)
 for (i in dat$id) {
@@ -5147,19 +5148,16 @@ invisible(gc())
 
 ```
 
-## Conclusion
-Transit time was significantly shorter in HF at Day 7 but not at other times. It should be noted that shorts measurement are generally in HF rats.
-
 # SETTINGS 
 
 Overview of the parameters and packages that were used for this analysis
 
-## PARAMETERS
+## PARAMETERS {.tabset .tabset-fade .tabset-pills}
 
 The following paramenters were set in for this analysis:
 
-```{r parameters, eval=FALSE}
-params <- readRDS("R_objects/import_params.RDS")
+```{r parameters, eval=TRUE}
+params <- readRDS("R_objects/animal_params.RDS")
 
 tmp <- unlist(params)
 dat <- data.frame(Parameter = names(tmp), Value = unname(tmp))

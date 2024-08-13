@@ -12,7 +12,7 @@ knit: (function(inputFile, encoding) {
     rmarkdown::render(
         inputFile, encoding = encoding,
         output_dir = file.path(dirname(inputFile),"output"),
-        output_file = paste0("Fibrex_", Sys.Date(), "_3_Description.html"))
+        output_file = paste0("Fibrex_", Sys.Date(), "_3_Relative_abundance.html"))
         })
 params:
     input: "R_objects/Phyloseq.Rdata"
