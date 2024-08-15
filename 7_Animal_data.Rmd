@@ -5150,7 +5150,7 @@ invisible(gc())
 ```
 
 
-# CONSUPTION DATA
+# CONSUMPTION DATA
 ## INTRODUCTION
 Data on feed and water consumption was measured throughout the trial period (day 0 to 21) mainly with the scope of monitoring feed consumption between HF and LF groups. The two feed types, beside having high difference in fiber, were not isocaloric and had different contents of fats and protein with HF diet (Altromin) providing 3400 kcal/kg and LF diet (AIN-93G based D19090404) provided 4000 kcal/kg. A significantly larger body weight gain was observed in LF fed rats.
 
@@ -5167,6 +5167,222 @@ rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
 invisible(gc()) #free up memory and report the memory usage.
 ```
 
+## NON-PARAMETRIC
+## Feed per cage per day
+### Prepare data
+
+This section sets the variables to be used and prepares the data if necessary.
+
+```{r, eval=TRUE}
+# load data 
+load("R_objects/consumption_data.Rdata")
+params <- readRDS("R_objects/animal_params.RDS")
+
+# Subset
+dat.clean <- subset(dat, !cage == 21)
+
+# Set names of variables
+PREDICTOR <- "feedtreat"
+OUTCOME <- "cal_cage_day_avr_g" # "feed_cage_day_avr_g"
+SUBJECT <- "cage"
+
+# Create formula
+PREDICTOR.F <- ifelse(length(PREDICTOR) > 1, paste(PREDICTOR, collapse = "*"), PREDICTOR)
+FORMULA <- as.formula(paste(OUTCOME,PREDICTOR.F, sep = " ~ "))
+
+# Summary samples in groups
+dat.clean %>% group_by(across(all_of(PREDICTOR))) %>% get_summary_stats(!!sym(OUTCOME), type = "mean_sd")
+
+# Create plot
+bxp <- dat.clean %>%
+  ggboxplot(x = if_else(length(PREDICTOR) > 1, PREDICTOR[2],PREDICTOR[1]),
+            y = OUTCOME,
+            color = PREDICTOR[1],
+            facet.by = if(length(PREDICTOR) == 3) PREDICTOR[3],
+            palette = params$COL)
+bxp
+
+# Test for outliers
+dat.clean %>% 
+  group_by(across(all_of(PREDICTOR))) %>% 
+  identify_outliers(!!sym(OUTCOME))
+
+# Build the linear model
+model  <- lm(FORMULA, data = dat.clean)
+# Create a QQ plot of residuals
+ggqqplot(residuals(model))
+# Compute Shapiro-Wilk test of normality
+shapiro_test(residuals(model))
+
+plot(model, 1)
+
+dat.clean %>% levene_test(FORMULA)
+
+# Save result
+EQUAL.VAR <- dat.clean %>% levene_test(FORMULA) %>% pull(p) > 0.05
+```
+
+
+#### Kruskal-Wallis test
+
+**Perform test**
+
+```{r , eval=TRUE, echo=TRUE, error=TRUE}
+
+res.aov <- dat.clean %>% kruskal_test(FORMULA)
+res.aov
+
+```
+
+**Effect size**
+
+The eta squared, based on the H-statistic, can be used as the measure of the Kruskal-Wallis test effect size. The interpretation values commonly in published literature are: 0.01- \< 0.06 (small effect), 0.06 - \< 0.14 (moderate effect) and \>= 0.14 (large effect).
+
+```{r , eval=TRUE, echo=TRUE, error=TRUE}
+
+dat.clean %>% kruskal_effsize(FORMULA)
+
+```
+
+**Post-hoc test if interaction is significant**
+
+A significant Kruskal-Wallis test is generally followed up by Dunn's test to identify which groups are different. It's also possible to use the Wilcoxon's test to calculate pairwise comparisons between group levels with corrections for multiple testing.
+
+```{r , eval=TRUE, echo=TRUE, error=TRUE}
+# pairwise comparisons
+pwc <- dat.clean %>% 
+  dunn_test(FORMULA, p.adjust.method = "fdr") 
+pwc
+```
+### Create figure
+```{r , eval=TRUE, echo=TRUE}
+# Set variables for inner and outer analysis, and variable for facet
+INNER.VAR <- "treatment"
+OUTER.VAR <- "feed"
+FACETVAR <- "dissection"
+
+# Statistics costumed for facet plotting
+## Pairwise comparison for inner variable
+stat.in <- dat.clean %>%
+  group_by(.data[[OUTER.VAR]]) %>%
+  wilcox_test(as.formula(paste0(OUTCOME," ~ ",INNER.VAR)),
+              paired = FALSE) %>%
+  # adjust_pvalue(method = "bonferroni") %>%
+  add_significance() %>%
+  p_format("p", accuracy = 0.001, trailing.zero = TRUE, new.col = TRUE)
+stat.in
+
+## Pairwise comparison for outer variable
+stat.out <- dat.clean %>%
+  # group_by(.data[[FACETVAR]]) %>%
+  wilcox_test(as.formula(paste0(OUTCOME," ~ ",OUTER.VAR)),
+              paired = FALSE) %>%
+  # adjust_pvalue(method = "bonferroni") %>%
+  add_significance() %>%
+  p_format("p", accuracy = 0.001, trailing.zero = TRUE, new.col = TRUE)
+stat.out
+
+## Calculate positions statistics on plot
+stat.in <- stat.in %>% add_xy_position(x = OUTER.VAR, dodge = 0.8)
+stat.out <- stat.out %>% add_xy_position(x = OUTER.VAR)
+stat.out$y.position <- max(stat.in$y.position)*1.1
+
+# Sort dat.clean
+dat.clean <- dat.clean[order(dat.clean$feedtreat),]
+
+# Create plot
+p <- ggboxplot(dat.clean, x = OUTER.VAR, y = OUTCOME,
+               color = PREDICTOR,
+               fill = PREDICTOR, 
+               add =  "jitter", 
+               add.params = list(size = 1)) +
+  scale_fill_manual(values = params$COL1, name = "Group", labels = c("HF_CTRL" = "HF-CTRL","HF_PFOS" = "HF-PFOS","LF_CTRL" = "LF-CTRL","LF_PFOS" = "LF-PFOS")) +
+  scale_color_manual(values = c("black","black","black","black")) +
+  scale_y_continuous(name = "Feed consumed per cage per day (g)",limits = c(120,240),breaks = seq(120,240,20)) + #limits = c(30,60),breaks = seq(30,60,5)) +
+  guides(color = "none") +
+  theme(axis.title.x = element_blank())
+
+p <- p + stat_pvalue_manual(stat.in, label = "p.format",tip.length = 0, hide.ns = FALSE)+
+  stat_pvalue_manual(stat.out, label = "p.format", tip.length = 0, hide.ns = FALSE)
+
+p
+# Plot for saving without legend
+#p2 <- p + theme(legend.position = "none")
+
+# Output plot
+ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_plot.png"), p, device = "png", dpi = 300, units = "mm", width = 100, height = 100)
+ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_plot.pdf"), p, device = "pdf", dpi = 300, units = "mm", width = 100, height = 100)
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
+invisible(gc()) #free up memory and report the memory usage.
+```
+### Create Nested figure
+```{r , eval=TRUE, echo=TRUE}
+# Set variables for inner and outer analysis, and variable for facet
+INNER.VAR <- "treatment"
+OUTER.VAR <- "feed"
+FACETVAR <- "dissection"
+
+# Statistics for facet by compound
+stat.in <- dat.clean %>%
+  group_by(.data[[FACETVAR]],.data[[OUTER.VAR]]) %>%
+  wilcox_test(as.formula(paste0(OUTCOME," ~ ",INNER.VAR)),
+              paired = FALSE) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>%
+  p_format("p.adj", accuracy = 0.001, trailing.zero = TRUE, new.col = TRUE)
+stat.in
+
+stat.out <- dat.clean %>%
+  group_by(.data[[FACETVAR]]) %>%
+  wilcox_test(as.formula(paste0(OUTCOME," ~ ",OUTER.VAR)),
+              paired = FALSE) %>%
+  adjust_pvalue(method = "BH") %>%
+  add_significance("p.adj") %>% 
+  p_format("p.adj", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+stat.out
+
+## Calculate positions statistics on plot
+stat.in <- stat.in %>% add_xy_position(x = OUTER.VAR, dodge = 0.8)
+stat.out <- stat.out %>% add_xy_position(x = OUTER.VAR)
+stat.out$y.position <- max(stat.in$y.position)*1.1
+
+# Sort dat.clean
+dat.clean <- dat.clean[order(dat.clean$feedtreat),]
+
+# Create plot
+p <- ggboxplot(dat.clean, x = OUTER.VAR, y = OUTCOME,
+               color = "feedtreat",
+               fill = "feedtreat", 
+               add =  "jitter", 
+               facet.by = FACETVAR,
+               add.params = list(size = 1)) +
+  scale_fill_manual(values = params$COL1, name = "Group", labels = c("HF_CTRL" = "HF-CTRL","HF_PFOS" = "HF-PFOS","LF_CTRL" = "LF-CTRL","LF_PFOS" = "LF-PFOS")) +
+  scale_color_manual(values = c("black","black","black","black")) +
+  scale_y_continuous(name = "Kcal intake per cage per day (kcal)",limits = c(120,240),breaks = seq(120,240,20)) + #limits = c(30,60),breaks = seq(30,60,5)) +
+  guides(color = "none") +
+  theme(axis.title.x = element_blank())
+
+p
+p <- p + stat_pvalue_manual(stat.in, label = "p.adj.format",tip.length = 0, hide.ns = FALSE)+
+  stat_pvalue_manual(stat.out, label = "p.adj.format", tip.length = 0, hide.ns = FALSE)
+
+p
+# # Plot for saving without legend
+# p2 <- p + theme(legend.position = "none")
+
+# Output plot
+ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_nested_plot.png"), p, device = "png", dpi = 300, units = "mm", width = 100, height = 100)
+ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_nested_plot.pdf"), p, device = "pdf", dpi = 300, units = "mm", width = 100, height = 100)
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
+invisible(gc()) #free up memory and report the memory usage.
+```
+
+
+## PARAMETRIC
 ## Feed per cage per day
 ### Prepare data
 
@@ -5301,7 +5517,7 @@ p <- ggboxplot(dat.clean, x = OUTER.VAR, y = OUTCOME,
                add.params = list(size = 1)) +
   scale_fill_manual(values = params$COL1, name = "Group", labels = c("HF_CTRL" = "HF-CTRL","HF_PFOS" = "HF-PFOS","LF_CTRL" = "LF-CTRL","LF_PFOS" = "LF-PFOS")) +
   scale_color_manual(values = c("black","black","black","black")) +
-  scale_y_continuous(name = "Feed consumed per day per cage (g)",limits = c(20,60),breaks = seq(20,60,5)) +
+  scale_y_continuous(name = "Feed consumed per cage per day (g)",limits = c(30,60),breaks = seq(30,60,5)) +
   guides(color = "none") +
   theme(axis.title.x = element_blank())
 
@@ -5310,169 +5526,16 @@ p <- p + stat_pvalue_manual(stat.in, label = "p.format",tip.length = 0, hide.ns 
 
 p
 # Plot for saving without legend
-p2 <- p + theme(legend.position = "none")
+#p2 <- p + theme(legend.position = "none")
 
 # Output plot
-ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_plot.png"), p2, device = "png", dpi = 300, units = "mm", width = 100, height = 100)
-ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_plot.pdf"), p2, device = "pdf", dpi = 300, units = "mm", width = 100, height = 100)
+ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_plot.png"), p, device = "png", dpi = 300, units = "mm", width = 100, height = 100)
+ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_plot.pdf"), p, device = "pdf", dpi = 300, units = "mm", width = 100, height = 100)
 
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
 invisible(gc()) #free up memory and report the memory usage.
 ```
-
-## Check of dissection days influence
-### Prepare data
-
-This section sets the variables to be used and prepares the data if necessary.
-
-```{r, eval=TRUE}
-# load data 
-load("R_objects/consumption_data.Rdata")
-params <- readRDS("R_objects/animal_params.RDS")
-
-# Subset
-dat.clean <- subset(dat, !cage == 21)
-
-# Set names of variables
-PREDICTOR <- c("feed","treatment","dissection")
-OUTCOME <- "feed_cage_day_avr_g"
-SUBJECT <- "cage"
-
-# Create formula
-PREDICTOR.F <- ifelse(length(PREDICTOR) > 1, paste(PREDICTOR, collapse = "*"), PREDICTOR)
-FORMULA <- as.formula(paste(OUTCOME,PREDICTOR.F, sep = " ~ "))
-
-# Summary samples in groups
-dat.clean %>% group_by(across(all_of(PREDICTOR))) %>% get_summary_stats(!!sym(OUTCOME), type = "mean_sd")
-
-# Create plot
-bxp <- dat.clean %>%
-  ggboxplot(x = if_else(length(PREDICTOR) > 1, PREDICTOR[2],PREDICTOR[1]),
-            y = OUTCOME,
-            color = PREDICTOR[1],
-            facet.by = if(length(PREDICTOR) == 3) PREDICTOR[3],
-            palette = params$COL)
-bxp
-
-# Test for outliers
-dat.clean %>% 
-  group_by(across(all_of(PREDICTOR))) %>% 
-  identify_outliers(!!sym(OUTCOME))
-
-# Build the linear model
-model  <- lm(FORMULA, data = dat.clean)
-# Create a QQ plot of residuals
-ggqqplot(residuals(model))
-# Compute Shapiro-Wilk test of normality
-shapiro_test(residuals(model))
-
-plot(model, 1)
-
-dat.clean %>% levene_test(FORMULA)
-
-# Save result
-EQUAL.VAR <- dat.clean %>% levene_test(FORMULA) %>% pull(p) > 0.05
-```
-
-This shows that body weight gain data has two outliers, has equal variance and is normally distributed without the outliers according to Shapiro-Wilk test. Therefore we use a **one-way ANOVA test with Tukey's honest significance test**.
-
-### ANOVA One-Way test
-
-**Perform test**
-
-If we had equality of variance we can now run a one-way ANOVA tests `anova_test()` (if we have equal variance) or a `welch_anova_test()` (if variance vary).
-
-```{r , eval=TRUE, echo=TRUE, error=TRUE}
-
-if(EQUAL.VAR) {
-  res.aov <- dat.clean %>% anova_test(FORMULA)
-  res.aov
-} else {
-  res.aov <- dat.clean %>% welch_anova_test(FORMULA)
-  res.aov
-}
-
-```
-
-**Perform posthoc test**
-
-A significant one-way ANOVA is generally followed up by Tukey post-hoc tests to perform multiple pairwise comparisons between groups. When running relaxed Welch one-way test, the Games-Howell post hoc test or pairwise t-tests (with no assumption of equal variances) can be used to compare all possible combinations of group differences.
-
-```{r , eval=TRUE, echo=TRUE, error=TRUE}
-if(EQUAL.VAR) {
-  pwc <- dat.clean %>% tukey_hsd(FORMULA)
-  pwc
-} else {
-  pwc <- dat.clean %>% games_howell_test(FORMULA)
-  pwc
-}
-```
-
-### Create figure
-```{r , eval=TRUE, echo=TRUE}
-# Set variables for inner and outer analysis, and variable for facet
-INNER.VAR <- "treatment"
-OUTER.VAR <- "feed"
-FACETVAR <- "dissection"
-
-# Statistics for facet by compound
-stat.in <- dat.clean %>%
-  group_by(.data[[FACETVAR]],.data[[OUTER.VAR]]) %>%
-  t_test(as.formula(paste(OUTCOME,"~",INNER.VAR, sep = " ")), 
-         paired = FALSE, var.equal = EQUAL.VAR, 
-         detailed = TRUE, alternative = "two.sided") %>%
-  add_significance() %>%
-  p_format("p", accuracy = 0.001, trailing.zero = TRUE, new.col = TRUE)
-stat.in
-
-stat.out <- dat.clean %>%
-  group_by(.data[[FACETVAR]]) %>%
-   t_test(as.formula(paste(OUTCOME,"~", OUTER.VAR, sep = " ")), 
-         paired = FALSE, var.equal = EQUAL.VAR, 
-         detailed = TRUE, alternative = "two.sided") %>%
-  add_significance() %>%
-  p_format("p", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
-stat.out
-
-## Calculate positions statistics on plot
-stat.in <- stat.in %>% add_xy_position(x = OUTER.VAR, dodge = 0.8)
-stat.out <- stat.out %>% add_xy_position(x = OUTER.VAR)
-stat.out$y.position <- max(stat.in$y.position)*1.1
-
-# Sort dat.clean
-dat.clean <- dat.clean[order(dat.clean$feedtreat),]
-
-# Create plot
-p <- ggboxplot(dat.clean, x = OUTER.VAR, y = OUTCOME,
-               color = "feedtreat",
-               fill = "feedtreat", 
-               add =  "jitter", 
-               facet.by = FACETVAR,
-               add.params = list(size = 1)) +
-  scale_fill_manual(values = params$COL1, name = "Group", labels = c("HF_CTRL" = "HF-CTRL","HF_PFOS" = "HF-PFOS","LF_CTRL" = "LF-CTRL","LF_PFOS" = "LF-PFOS")) +
-  scale_color_manual(values = c("black","black","black","black")) +
-  scale_y_continuous(name = "Feed consumed per day per cage (g)",limits = c(30,60),breaks = seq(30,60,5)) +
-  guides(color = "none") +
-  theme(axis.title.x = element_blank())
-
-p
-p <- p + stat_pvalue_manual(stat.in, label = "p.format",tip.length = 0, hide.ns = FALSE)+
-  stat_pvalue_manual(stat.out, label = "p.format", tip.length = 0, hide.ns = FALSE)
-
-p
-# # Plot for saving without legend
-# p2 <- p + theme(legend.position = "none")
-
-# Output plot
-ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_nested_plot.png"), p, device = "png", dpi = 300, units = "mm", width = 100, height = 100)
-ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_nested_plot.pdf"), p, device = "pdf", dpi = 300, units = "mm", width = 100, height = 100)
-
-# clear the environment and release memory
-rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
-invisible(gc()) #free up memory and report the memory usage.
-```
-
 
 ## Calories per cage per day
 ### Prepare data
@@ -5608,7 +5671,7 @@ p <- ggboxplot(dat.clean, x = OUTER.VAR, y = OUTCOME,
                add.params = list(size = 1)) +
   scale_fill_manual(values = params$COL1, name = "Group", labels = c("HF_CTRL" = "HF-CTRL","HF_PFOS" = "HF-PFOS","LF_CTRL" = "LF-CTRL","LF_PFOS" = "LF-PFOS")) +
   scale_color_manual(values = c("black","black","black","black")) +
-  scale_y_continuous(name = "Kcal intake per day per cage (g)",limits = c(80,240),breaks = seq(80,240,20)) +
+  scale_y_continuous(name = "Kcal intake per cage per day (kcal)",limits = c(120,240),breaks = seq(120,240,20)) +
   guides(color = "none") +
   theme(axis.title.x = element_blank())
 
@@ -5617,17 +5680,172 @@ p <- p + stat_pvalue_manual(stat.in, label = "p.format",tip.length = 0, hide.ns 
 
 p
 # Plot for saving without legend
-p2 <- p + theme(legend.position = "none")
+#p2 <- p + theme(legend.position = "none")
 
 # Output plot
-ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_plot.png"), p2, device = "png", dpi = 300, units = "mm", width = 100, height = 100)
-ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_plot.pdf"), p2, device = "pdf", dpi = 300, units = "mm", width = 100, height = 100)
+ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_plot.png"), p, device = "png", dpi = 300, units = "mm", width = 100, height = 100)
+ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_plot.pdf"), p, device = "pdf", dpi = 300, units = "mm", width = 100, height = 100)
 
 # clear the environment and release memory
 rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
 invisible(gc()) #free up memory and report the memory usage.
 ```
 
+
+
+
+
+## MIXED ANOVA
+### Prepare data
+
+This section sets the variables to be used and prepares the data if necessary.
+
+```{r, eval=TRUE}
+# load data 
+load("R_objects/consumption_data.Rdata")
+params <- readRDS("R_objects/animal_params.RDS")
+
+# Subset
+dat.clean <- subset(dat, !cage == 21)
+
+# Set names of variables
+PREDICTOR <- c("feed","treatment","dissection")
+OUTCOME <- "cal_cage_day_avr_g"
+SUBJECT <- "cage"
+
+# Create formula
+PREDICTOR.F <- ifelse(length(PREDICTOR) > 1, paste(PREDICTOR, collapse = "*"), PREDICTOR)
+FORMULA <- as.formula(paste(OUTCOME,PREDICTOR.F, sep = " ~ "))
+
+# Summary samples in groups
+dat.clean %>% group_by(across(all_of(PREDICTOR))) %>% get_summary_stats(!!sym(OUTCOME), type = "mean_sd")
+
+# Create plot
+bxp <- dat.clean %>%
+  ggboxplot(x = if_else(length(PREDICTOR) > 1, PREDICTOR[2],PREDICTOR[1]),
+            y = OUTCOME,
+            color = PREDICTOR[1],
+            facet.by = if(length(PREDICTOR) == 3) PREDICTOR[3],
+            palette = params$COL)
+bxp
+
+# Test for outliers
+dat.clean %>% 
+  group_by(across(all_of(PREDICTOR))) %>% 
+  identify_outliers(!!sym(OUTCOME))
+
+# Build the linear model
+model  <- lm(FORMULA, data = dat.clean)
+# Create a QQ plot of residuals
+ggqqplot(residuals(model))
+# Compute Shapiro-Wilk test of normality
+shapiro_test(residuals(model))
+
+plot(model, 1)
+
+dat.clean %>% levene_test(FORMULA)
+
+# Save result
+EQUAL.VAR <- dat.clean %>% levene_test(FORMULA) %>% pull(p) > 0.05
+```
+
+This shows that body weight gain data has two outliers, has equal variance and is normally distributed without the outliers according to Shapiro-Wilk test. Therefore we use a **one-way ANOVA test with Tukey's honest significance test**.
+
+### ANOVA One-Way test
+
+**Perform test**
+
+If we had equality of variance we can now run a one-way ANOVA tests `anova_test()` (if we have equal variance) or a `welch_anova_test()` (if variance vary).
+
+```{r , eval=TRUE, echo=TRUE, error=TRUE}
+
+if(EQUAL.VAR) {
+  res.aov <- dat.clean %>% anova_test(FORMULA)
+  res.aov
+} else {
+  res.aov <- dat.clean %>% welch_anova_test(FORMULA)
+  res.aov
+}
+
+```
+
+**Perform posthoc test**
+
+A significant one-way ANOVA is generally followed up by Tukey post-hoc tests to perform multiple pairwise comparisons between groups. When running relaxed Welch one-way test, the Games-Howell post hoc test or pairwise t-tests (with no assumption of equal variances) can be used to compare all possible combinations of group differences.
+
+```{r , eval=TRUE, echo=TRUE, error=TRUE}
+if(EQUAL.VAR) {
+  pwc <- dat.clean %>% tukey_hsd(FORMULA)
+  pwc
+} else {
+  pwc <- dat.clean %>% games_howell_test(FORMULA)
+  pwc
+}
+```
+
+### Create figure
+```{r , eval=TRUE, echo=TRUE}
+# Set variables for inner and outer analysis, and variable for facet
+INNER.VAR <- "treatment"
+OUTER.VAR <- "feed"
+FACETVAR <- "dissection"
+
+# Statistics for facet by compound
+stat.in <- dat.clean %>%
+  group_by(.data[[FACETVAR]],.data[[OUTER.VAR]]) %>%
+  t_test(as.formula(paste(OUTCOME,"~",INNER.VAR, sep = " ")), 
+         paired = FALSE, var.equal = EQUAL.VAR, 
+         detailed = TRUE, alternative = "two.sided") %>%
+  add_significance() %>%
+  p_format("p", accuracy = 0.001, trailing.zero = TRUE, new.col = TRUE)
+stat.in
+
+stat.out <- dat.clean %>%
+  group_by(.data[[FACETVAR]]) %>%
+   t_test(as.formula(paste(OUTCOME,"~", OUTER.VAR, sep = " ")), 
+         paired = FALSE, var.equal = EQUAL.VAR, 
+         detailed = TRUE, alternative = "two.sided") %>%
+  add_significance() %>%
+  p_format("p", accuracy = 0.0001, trailing.zero = TRUE, new.col = TRUE)
+stat.out
+
+## Calculate positions statistics on plot
+stat.in <- stat.in %>% add_xy_position(x = OUTER.VAR, dodge = 0.8)
+stat.out <- stat.out %>% add_xy_position(x = OUTER.VAR)
+stat.out$y.position <- max(stat.in$y.position)*1.1
+
+# Sort dat.clean
+dat.clean <- dat.clean[order(dat.clean$feedtreat),]
+
+# Create plot
+p <- ggboxplot(dat.clean, x = OUTER.VAR, y = OUTCOME,
+               color = "feedtreat",
+               fill = "feedtreat", 
+               add =  "jitter", 
+               facet.by = FACETVAR,
+               add.params = list(size = 1)) +
+  scale_fill_manual(values = params$COL1, name = "Group", labels = c("HF_CTRL" = "HF-CTRL","HF_PFOS" = "HF-PFOS","LF_CTRL" = "LF-CTRL","LF_PFOS" = "LF-PFOS")) +
+  scale_color_manual(values = c("black","black","black","black")) +
+  scale_y_continuous(name = "Kcal intake per cage per day (kcal)",limits = c(120,240),breaks = seq(120,240,20)) + #limits = c(30,60),breaks = seq(30,60,5)) +
+  guides(color = "none") +
+  theme(axis.title.x = element_blank())
+
+p
+p <- p + stat_pvalue_manual(stat.in, label = "p.format",tip.length = 0, hide.ns = FALSE)+
+  stat_pvalue_manual(stat.out, label = "p.format", tip.length = 0, hide.ns = FALSE)
+
+p
+# # Plot for saving without legend
+# p2 <- p + theme(legend.position = "none")
+
+# Output plot
+ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_nested_plot.png"), p, device = "png", dpi = 300, units = "mm", width = 100, height = 100)
+ggsave(filename = paste0("plots/animal_data/consumption/",OUTCOME,"_nested_plot.pdf"), p, device = "pdf", dpi = 300, units = "mm", width = 100, height = 100)
+
+# clear the environment and release memory
+rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
+invisible(gc()) #free up memory and report the memory usage.
+```
 
 
 # SETTINGS 
