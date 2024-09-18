@@ -7,8 +7,8 @@ This repository covers processing and analyses of data collected Fibrex
 project and contains the code necessary to reproduce the complete
 statistical analysis for the article:
 
-**Dietary fibre intake increases excretion/depuration of perfluorooctane
-sulfonic acid in male Sprague-Dawley rats** (doi: \###########).
+**Fibre rich diet increases excretion of perfluorooctane sulfonic acid
+(PFOS) in male Sprague-Dawley rats** (doi: \###########).
 
 All files and folders should be copied to your local folder to ensure
 script compliance.
@@ -44,7 +44,7 @@ the numbered order is encouraged:
   treatments on Day 3, 5 and 7, and facultative anaerobe estimate.
 - **7_Animal_data.Rmd**: Statistical analysis of collected quantitative
   weight, PFOS, short-chain fatty acid, gastrointestinal transit time,
-  and gastrointestinal pH data.
+  gastrointestinal pH data, and feed consumption data.
 
 ## Install packages
 

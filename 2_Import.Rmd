@@ -475,7 +475,6 @@ mock.ag <- mock.clean %>% group_by(Sample, Family) %>% summarise(Abundance = sum
 
 # Create plots
 mock.plot <- ggbarplot(mock.ag, x = "Sample", y = "Abundance", fill = "Family", palette = "npg",rotate=TRUE, ylab = FALSE)
-mock.plot
 
 suppressMessages(ggsave("plots/test_mock_comparison.png",mock.plot,device = "png"))
 
@@ -643,7 +642,7 @@ invisible(gc())
 
 There is randomness involved in performing rarefaction (random subsampling). To minimize any effect of this randomness it is recommended to use the mean of multiple rarefactions instead of just relying on just one random subsampling. Not rarefying a sample can create a bias, so to avoid this I will rarefy all samples to 90% of the lowest sample depth (default setting). As this will be done for just one sequencing depth and we need the results to be consistent default setting is to rarefy 100 times. The function will produce a data.frame with sample metadata and the mean and standard deviation for each sample using the methods set prior.
 
-```{r alpha-div-calc, eval=FALSE}
+```{r alpha-div-calc, eval=TRUE}
 params <- readRDS(file = "R_objects/import_params.RDS")
 #load("scripts/adiv.Rdata")
 

@@ -14,8 +14,6 @@ knit: (function(inputFile, encoding) {
         output_dir = file.path(dirname(inputFile),"output"),
         output_file = paste0("Fibrex_", Sys.Date(), "_6_differential_abundance.html")) 
     })
-bibliography: references.bib
-link-citations: true
 params:
     input: "R_objects/Phyloseq.Rdata"
     meta: "input/metadata_fibrex.csv"
@@ -211,7 +209,7 @@ load(params$input)
 # Remove day 20
 phy <- subset_samples(physeq = phy, day %in% c("d0","d08","d12","d16","d21"))
 
-str.agg <- c("Feces","Feces_LF","Feces_HF","Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS","Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d21","Feces_d0d08","Feces_d08d21") #,"Feces_d20"
+str.agg <- c("Feces","Feces_LF","Feces_HF","Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF","Feces_CTRL","Feces_PFOS","Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d21","Feces_d0d08","Feces_d08d21")
 
 for (SUBNAME in str.agg) {
   # Determine material parameter
@@ -244,9 +242,6 @@ for (SUBNAME in str.agg) {
   } else if (grepl("_d16",SUBNAME) == TRUE) {
     DAY <- "d16"
     dn <- "day16"
-  # } else if (grepl("_d20",SUBNAME) == TRUE) {
-  #   DAY <- "d20"
-  #   dn <- "day20"
   } else if (grepl("_d21",SUBNAME) == TRUE) {
     DAY <- "d21"
     dn <- "day21"
@@ -337,7 +332,7 @@ Testing differential abundance between feeding groups LF = Low fibre, HF = High 
 ##### SPECIES
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r d0, eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -392,7 +387,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -435,7 +430,7 @@ invisible(gc())
 ##### GENUS
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -492,7 +487,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -525,7 +520,7 @@ invisible(gc())
 ##### FAMILY
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -582,7 +577,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - Rank (ttr) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttr(filt, predictor = PDI)
 
@@ -617,7 +612,7 @@ invisible(gc())
 ##### SPECIES (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -674,7 +669,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -716,7 +711,7 @@ invisible(gc())
 ##### GENUS (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -773,7 +768,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -814,7 +809,7 @@ invisible(gc())
 ##### FAMILY (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -871,7 +866,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - Rank (ttr) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -913,7 +908,7 @@ invisible(gc())
 ##### SPECIES (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -970,7 +965,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -1012,7 +1007,7 @@ invisible(gc())
 ##### GENUS (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -1069,7 +1064,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -1110,7 +1105,7 @@ invisible(gc())
 ##### FAMILY (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -1167,7 +1162,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - Rank (ttr) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -1217,7 +1212,7 @@ Here we take a look at the differencial abundance driven by PFOS treatment (CTRL
 ##### SPECIES (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -1273,7 +1268,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -1315,7 +1310,7 @@ invisible(gc())
 ##### GENUS (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -1372,7 +1367,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -1413,7 +1408,7 @@ invisible(gc())
 ##### FAMILY (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -1470,7 +1465,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -1515,7 +1510,7 @@ Here we take a look at the differential abundance driven by PFOS treatment (CTRL
 ##### SPECIES (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -1571,7 +1566,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -1612,7 +1607,7 @@ invisible(gc())
 ##### GENUS (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -1669,7 +1664,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"
 
 Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -1710,7 +1705,7 @@ invisible(gc())
 ##### FAMILY (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -1767,7 +1762,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"
 
 Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -1814,7 +1809,7 @@ Here we investigate the differential abundance driven by feed (No fibre vs. Fibr
 ##### SPECIES
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -1870,7 +1865,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -1912,7 +1907,7 @@ invisible(gc())
 ##### GENUS
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -1969,7 +1964,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified Log t-test (ltt) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ltt(filt, predictor = PDI)
 
@@ -2010,7 +2005,7 @@ invisible(gc())
 ##### FAMILY
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -2067,7 +2062,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -2111,7 +2106,7 @@ Here we investigate the differential abundance driven by feed (No fibre vs. Fibr
 ##### SPECIES
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -2167,7 +2162,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -2209,7 +2204,7 @@ invisible(gc())
 ##### GENUS
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -2266,7 +2261,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ltt(filt, predictor = PDI)
 
@@ -2307,7 +2302,7 @@ invisible(gc())
 ##### FAMILY
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -2364,7 +2359,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ltt(filt, predictor = PDI)
 
@@ -2413,7 +2408,7 @@ Here we take a look at the differencial abundance driven by PFOS treatment (CTRL
 ##### SPECIES (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -2504,7 +2499,7 @@ invisible(gc())
 ##### GENUS (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -2561,7 +2556,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - RANK (ttr) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttr(filt, predictor = PDI)
 
@@ -2602,7 +2597,7 @@ invisible(gc())
 ##### FAMILY (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -2659,7 +2654,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -2704,7 +2699,7 @@ Here we take a look at the differential abundance driven by PFOS treatment (CTRL
 ##### SPECIES (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -2760,7 +2755,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -2802,7 +2797,7 @@ invisible(gc())
 ##### GENUS (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -2859,7 +2854,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"
 
 Having now identified t-test - CLR (ttc)  as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -2900,7 +2895,7 @@ invisible(gc())
 ##### FAMILY (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -2957,7 +2952,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"
 
 Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -3004,7 +2999,7 @@ Here we investigate the differential abundance driven by feed (No fibre vs. Fibr
 ##### SPECIES
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -3060,7 +3055,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -3102,7 +3097,7 @@ invisible(gc())
 ##### GENUS
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -3159,7 +3154,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified Log t-test (ltt) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -3200,7 +3195,7 @@ invisible(gc())
 ##### FAMILY
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -3257,7 +3252,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttt(filt, predictor = PDI)
 
@@ -3301,7 +3296,7 @@ Here we investigate the differential abundance driven by feed (No fibre vs. Fibr
 ##### SPECIES
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -3357,7 +3352,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -3399,7 +3394,7 @@ invisible(gc())
 ##### GENUS
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -3456,7 +3451,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -3497,7 +3492,7 @@ invisible(gc())
 ##### FAMILY
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -3554,7 +3549,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ltt(filt, predictor = PDI)
 
@@ -3603,7 +3598,7 @@ Here we take a look at the differencial abundance driven by PFOS treatment (CTRL
 ##### SPECIES (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -3659,7 +3654,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -3701,7 +3696,7 @@ invisible(gc())
 ##### GENUS (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -3758,7 +3753,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - RANK (ttr) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttr(filt, predictor = PDI)
 
@@ -3799,7 +3794,7 @@ invisible(gc())
 ##### FAMILY (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -3856,7 +3851,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -3901,7 +3896,7 @@ Here we take a look at the differential abundance driven by PFOS treatment (CTRL
 ##### SPECIES (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -3957,7 +3952,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -3999,7 +3994,7 @@ invisible(gc())
 ##### GENUS (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -4056,7 +4051,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"
 
 Having now identified t-test - CLR (ttc)  as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -4097,7 +4092,7 @@ invisible(gc())
 ##### FAMILY (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -4154,7 +4149,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"
 
 Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -4201,7 +4196,7 @@ Here we investigate the differential abundance driven by feed (No fibre vs. Fibr
 ##### SPECIES
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -4257,7 +4252,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -4299,7 +4294,7 @@ invisible(gc())
 ##### GENUS
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -4356,7 +4351,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified Log t-test (ltt) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -4397,7 +4392,7 @@ invisible(gc())
 ##### FAMILY
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -4454,7 +4449,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttt(filt, predictor = PDI)
 
@@ -4498,7 +4493,7 @@ Here we investigate the differential abundance driven by feed (No fibre vs. Fibr
 ##### SPECIES
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -4554,7 +4549,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -4596,7 +4591,7 @@ invisible(gc())
 ##### GENUS
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -4653,7 +4648,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -4694,7 +4689,7 @@ invisible(gc())
 ##### FAMILY
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -4751,7 +4746,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ltt(filt, predictor = PDI)
 
@@ -4802,7 +4797,7 @@ Here we take a look at the differencial abundance driven by PFOS treatment (CTRL
 ##### SPECIES (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -4858,7 +4853,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -4900,7 +4895,7 @@ invisible(gc())
 ##### GENUS (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -4957,7 +4952,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - RANK (ttr) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttr(filt, predictor = PDI)
 
@@ -4998,7 +4993,7 @@ invisible(gc())
 ##### FAMILY (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -5055,7 +5050,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -5100,7 +5095,7 @@ Here we take a look at the differential abundance driven by PFOS treatment (CTRL
 ##### SPECIES (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -5156,7 +5151,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -5198,7 +5193,7 @@ invisible(gc())
 ##### GENUS (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -5255,7 +5250,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"
 
 Having now identified t-test - CLR (ttc)  as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -5296,7 +5291,7 @@ invisible(gc())
 ##### FAMILY (NO SIGNIFICANCE)
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -5353,7 +5348,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"
 
 Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -5400,7 +5395,7 @@ Here we investigate the differential abundance driven by feed (No fibre vs. Fibr
 ##### SPECIES
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -5456,7 +5451,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -5498,7 +5493,7 @@ invisible(gc())
 ##### GENUS
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -5555,7 +5550,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified Log t-test (ltt) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -5596,7 +5591,7 @@ invisible(gc())
 ##### FAMILY
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -5653,7 +5648,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttt(filt, predictor = PDI)
 
@@ -5697,7 +5692,7 @@ Here we investigate the differential abundance driven by feed (No fibre vs. Fibr
 ##### SPECIES
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -5753,7 +5748,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -5795,7 +5790,7 @@ invisible(gc())
 ##### GENUS
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
@@ -5852,7 +5847,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -5893,7 +5888,7 @@ invisible(gc())
 ##### FAMILY
 **TEST METHOD**
 
-```{r , eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
@@ -5950,7 +5945,7 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
 
-```{r , eval=TRUE, echo=TRUE, fig.width=10, fig.height=5}
+```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ltt(filt, predictor = PDI)
 
@@ -6094,7 +6089,7 @@ invisible(gc())
 ## ABUNDANCE + PSEUDOCOUNT (Figure 7)
 Significant difference in abundance was found for unclassified genera "Family_Enterobacteriaceae" above. Here we investigate and plot all genera present on day 8 in the family "Enterobacteriaceae".
 
-``` {r , eval=TRUE, echo=TRUE}
+``` {r , eval=FALSE, echo=TRUE}
 # Collected figures for Families showing significant differences
 params <- readRDS("R_objects/comp_params.RDS")
 LVL <- "Genus"
@@ -6205,349 +6200,6 @@ invisible(gc())
 
 ```
 
-
-# NOT INCLUDED IN ARTICLE
-## CORRELATIONAL ANALYSIS TO QUANTITATIVE PFOS (Feces)
-Also run one with day as PDI and split by treatment (CTRL-PFOS) to tell if there are timeline differences.
-
-```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
-params <- readRDS("R_objects/comp_params.RDS")
-
-#Set parameters
-LVLS <- c("Genus","Family","Order","Class")
-PDI <- "samplePFOS_ug"#"serumPFOS_ug"
-SUBNAMES <- c("Feces","Feces_HF","Feces_LF","Feces_d08","Feces_d12","Feces_d16","Feces_d21") #,"Ileum","Ileum_HF","Ileum_LF","Cecum","Cecum_HF","Cecum_LF"
-
-for (LVL in LVLS) {
-  for (SUBNAME in SUBNAMES) {
-        # Create sub-folder
-    if (!file.exists(paste0("plots/differential_abundance/",SUBNAME))) dir.create(file.path(getwd(), paste0("plots/differential_abundance/",SUBNAME)))
-    
-    # Load data
-    load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
-    
-    #Subset and specify level
-    if (LVL == "Genus") {
-      phy.ge <- subset_samples(phy.ge, treatment == "PFOS" & day != "d0")
-      phy.used <- phy.ge
-      F.LVL <- "Family"
-    } else if (LVL == "Family") {
-      phy.fa <- subset_samples(phy.fa, treatment == "PFOS" & day != "d0")
-      phy.used <- phy.fa
-      F.LVL <- "Family"
-    } else if (LVL == "Order") {
-      phy.or <- subset_samples(phy.or, treatment == "PFOS" & day != "d0")
-      phy.used <- phy.or
-      F.LVL <- "Order"
-    } else if (LVL == "Class") {
-      phy.cl <- subset_samples(phy.cl, treatment == "PFOS" & day != "d0")
-      phy.used <- phy.cl
-      F.LVL <- "Class"
-    }
-    
-    if (grepl("Feces_d",SUBNAME) == TRUE) {
-      phy.hf <- subset_samples(phy.used, feed == "HF")
-      phy.lf <- subset_samples(phy.used, feed == "LF")
-      FEEDS <- c("HF","LF")
-      
-      for (FEED in FEEDS) {
-        
-        if (FEED == "HF") {
-          phy.used <- phy.hf
-        } else if (FEED == "LF") {
-          phy.used <- phy.lf
-        }
-        
-        # Filter data
-        filt <- preDA(data = phy.used, min.reads = 20, min.samples = 4)
-        filt <- transform_sample_counts(filt, function(x) x/sum(x))
-        
-        # Run spearman selected analysis
-        filt.DA <- DA.spe(filt, predictor = PDI, exact = FALSE)
-        
-        # Evaluate the plot and summary table
-        table(filt.DA$pval.adj < 0.05)
-        filt.p5 <- filt.DA[filt.DA$pval.adj < 0.05,]
-        filt.p5 <- filter(filt.p5, rowSums(is.na(filt.p5)) != ncol(filt.p5)) 
-        filt.p5
-        
-        if (any(filt.p5$pval.adj > 0)) {
-          # Create a subset of the samples
-          filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
-          DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05], x = filt.ra)
-          
-          # melt the data
-          DAm <- psmelt(DA.sig)
-          
-          # Add pseudo count
-          pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-          
-          # Create plot
-          p.cor <- ggplot(DAm, aes(x = .data[[PDI]], y = Abundance+pseudocount, color = .data[[LVL]])) + 
-            geom_jitter() + 
-            geom_smooth(method=lm) + 
-            facet_wrap(F.LVL, scales = "free_y") + 
-            scale_y_log10() +
-            scale_x_continuous() + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
-            theme_pubr()
-          p.cor
-          print(p.cor)
-          # Save output
-          suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_",FEED,".pdf"), p.cor, device = "pdf", units = "mm", width = 400, height = 300, dpi = 300))
-          suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_",FEED,".png"), p.cor, device = "png", units = "mm", width = 400, height = 300, dpi = 300))
-    
-          if (any(filt.p5$rho > 0)) {
-            DA.sigpos <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05 & filt.DA$rho > 0], x = filt.ra)
-            
-            # melt the data
-            DAmpos <- psmelt(DA.sigpos)
-            
-            # Add pseudo count
-            pseudocount <- min(DAmpos$Abundance[DAmpos$Abundance != 0])
-            
-            # Create positive corr plots
-            p.pos <- ggplot(DAmpos, aes(x = .data[[PDI]], y = Abundance+pseudocount, color = .data[[LVL]])) + 
-              geom_jitter() + 
-              geom_smooth(method=lm) + 
-              facet_wrap(F.LVL, scales = "free_y") + 
-              scale_y_log10() +
-              scale_x_continuous() + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
-              theme_pubr()
-            p.pos
-            
-            # Print output
-            print(p.pos)
-            
-            # Save output
-            suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_",FEED,"_positive.pdf"), p.pos, device = "pdf", units = "mm", width = 400, height = 300, dpi = 300))
-            suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_",FEED,"_positive.png"), p.pos, device = "png", units = "mm", width = 400, height = 300, dpi = 300))
-          } else {print(paste0("No positive correlations for ",LVL," in ",SUBNAME,"."))}
-          
-          if (any(filt.p5$rho < 0)) {
-            DA.signeg <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05 & filt.DA$rho < 0], x = filt.ra)
-            
-            # melt the data
-            DAmneg <- psmelt(DA.signeg)
-            
-            # Add pseudo count
-            pseudocount <- min(DAmneg$Abundance[DAmneg$Abundance != 0])
-            
-            # Create negative corr plots
-            p.neg <- ggplot(DAmneg, aes(x = .data[[PDI]], y = Abundance+pseudocount, color = .data[[LVL]])) + 
-              geom_jitter() + 
-              geom_smooth(method=lm) + 
-              facet_wrap(F.LVL, scales = "free_y") + 
-              scale_y_log10() +
-              scale_x_continuous() + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
-              theme_pubr()
-            p.neg
-            
-            # Print output
-            print(p.neg)
-            
-            # Save output
-            suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_",FEED,"_negative.pdf"), p.neg, device = "pdf", units = "mm", width = 400, height = 300, dpi = 300))
-            suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_",FEED,"_negative.png"), p.neg, device = "png", units = "mm", width = 400, height = 300, dpi = 300))
-            
-            } else {print(paste0("No negative correlations for ",LVL," in ",SUBNAME,"."))}
-          }
-        }
-#############################
-      
-    } else {
-      
-    # Filter data
-    filt <- preDA(data = phy.used, min.reads = 20, min.samples = 4)
-    filt <- transform_sample_counts(filt, function(x) x/sum(x))
-    
-    # Run spearman selected analysis
-    filt.DA <- DA.spe(filt, predictor = PDI, exact = FALSE)
-    
-    # Evaluate the plot and summary table
-    table(filt.DA$pval.adj < 0.05)
-    filt.p5 <- filt.DA[filt.DA$pval.adj < 0.05,]
-    filt.p5 <- filter(filt.p5, rowSums(is.na(filt.p5)) != ncol(filt.p5)) 
-    filt.p5
-    
-    if (any(filt.p5$pval.adj > 0)) {
-      # Create a subset of the samples
-      filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
-      DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05], x = filt.ra)
-      
-      # melt the data
-      DAm <- psmelt(DA.sig)
-      
-      # Add pseudo count
-      pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-      
-      # Create plot
-      p.cor <- ggplot(DAm, aes(x = .data[[PDI]], y = Abundance+pseudocount, color = .data[[LVL]])) + 
-        geom_jitter() + 
-        geom_smooth(method=lm) + 
-        facet_wrap(F.LVL, scales = "free_y") + 
-        scale_y_log10() +
-        scale_x_continuous() + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
-        theme_pubr()
-      p.cor
-      print(p.cor)
-      # Save output
-      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,".pdf"), p.cor, device = "pdf", units = "mm", width = 400, height = 300, dpi = 300))
-      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,".png"), p.cor, device = "png", units = "mm", width = 400, height = 300, dpi = 300))
-
-      if (any(filt.p5$rho > 0)) {
-      DA.sigpos <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05 & filt.DA$rho > 0], x = filt.ra)
-      
-      # melt the data
-      DAmpos <- psmelt(DA.sigpos)
-      
-      # Add pseudo count
-      pseudocount <- min(DAmpos$Abundance[DAmpos$Abundance != 0])
-      
-      # Create positive corr plots
-      p.pos <- ggplot(DAmpos, aes(x = .data[[PDI]], y = Abundance+pseudocount, color = .data[[LVL]])) + 
-        geom_jitter() + 
-        geom_smooth(method=lm) + 
-        facet_wrap(F.LVL, scales = "free_y") + 
-        scale_y_log10() +
-        scale_x_continuous() + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
-        theme_pubr()
-      p.pos
-      
-      # Print output
-      print(p.pos)
-      
-      # Save output
-      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_positive.pdf"), p.pos, device = "pdf", units = "mm", width = 400, height = 300, dpi = 300))
-      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_positive.png"), p.pos, device = "png", units = "mm", width = 400, height = 300, dpi = 300))
-      } else {print(paste0("No positive correlations for ",LVL," in ",SUBNAME,"."))}
-      
-      if (any(filt.p5$rho < 0)) {
-      DA.signeg <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05 & filt.DA$rho < 0], x = filt.ra)
-      
-      # melt the data
-      DAmneg <- psmelt(DA.signeg)
-      
-      # Add pseudo count
-      pseudocount <- min(DAmneg$Abundance[DAmneg$Abundance != 0])
-      
-      # Create negative corr plots
-      p.neg <- ggplot(DAmneg, aes(x = .data[[PDI]], y = Abundance+pseudocount, color = .data[[LVL]])) + 
-        geom_jitter() + 
-        geom_smooth(method=lm) + 
-        facet_wrap(F.LVL, scales = "free_y") + 
-        scale_y_log10() +
-        scale_x_continuous() + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
-        theme_pubr()
-      p.neg
-      
-      # Print output
-      print(p.neg)
-      
-      # Save output
-      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_negative.pdf"), p.neg, device = "pdf", units = "mm", width = 400, height = 300, dpi = 300))
-      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,"_negative.png"), p.neg, device = "png", units = "mm", width = 400, height = 300, dpi = 300))
-      } else {print(paste0("No negative correlations for ",LVL," in ",SUBNAME,"."))}
-      
-    } else {
-      print(paste0("No signficance found in filt.p5 in ",PDI," for ",SUBNAME," at ",LVL,"."))
-    }
-    }
-  }
-}
-
-# clear the environment and release memory
-rm(list = ls(all.names = TRUE))
-invisible(gc())
-```
-## CORRELATIONAL ANALYSIS TO DAY (Feces)
-Also run one with day as PDI and split by treatment (CTRL-PFOS) to tell if there are timeline differences.
-```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
-params <- readRDS("R_objects/comp_params.RDS")
-
-#Set parameters
-LVLS <- c("Genus","Family","Order","Class")
-PDI <- "day_no"
-SUBNAMES <- c("Feces","Feces_","Ileum","Cecum") #,"Ileum","Ileum_HF","Ileum_LF","Cecum","Cecum_HF","Cecum_LF"
-SUBNAME <- "Feces"
-for (LVL in LVLS) {
-  for (SUBNAME in SUBNAMES) {
-        # Create sub-folder
-    if (!file.exists(paste0("plots/differential_abundance/",SUBNAME))) dir.create(file.path(getwd(), paste0("plots/differential_abundance/",SUBNAME)))
-    
-    # Load data
-    load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
-    
-    #Subset and specify level
-    if (LVL == "Genus") {
-      # phy.ge <- subset_samples(phy.ge, treatment == "PFOS" & day != "d0")
-      phy.used <- phy.ge
-      F.LVL <- "Genus"
-    } else if (LVL == "Family") {
-      # phy.fa <- subset_samples(phy.fa, treatment == "PFOS" & day != "d0")
-      phy.used <- phy.fa
-      F.LVL <- "Family"
-    } else if (LVL == "Order") {
-      # phy.or <- subset_samples(phy.or, treatment == "PFOS" & day != "d0")
-      phy.used <- phy.or
-      F.LVL <- "Order"
-    } else if (LVL == "Class") {
-      # phy.cl <- subset_samples(phy.cl, treatment == "PFOS" & day != "d0")
-      phy.used <- phy.cl
-      F.LVL <- "Class"
-    }
-      
-    # Filter data
-    filt <- preDA(data = phy.used, min.reads = 20, min.samples = 4)
-    filt <- transform_sample_counts(filt, function(x) x/sum(x))
-    
-    # Run spearman selected analysis
-    filt.DA <- DA.spe(filt, predictor = PDI, exact = FALSE)
-    
-    # Evaluate the plot and summary table
-    table(filt.DA$pval.adj < 0.05)
-    filt.p5 <- filt.DA[filt.DA$pval.adj < 0.05,]
-    filt.p5 <- filter(filt.p5, rowSums(is.na(filt.p5)) != ncol(filt.p5)) 
-    filt.p5
-    
-    if (any(filt.p5$pval.adj > 0)) {
-      # Create a subset of the samples
-      filt.ra <- transform_sample_counts(filt, function(x) x/sum(x)*100)
-      DA.sig <- prune_taxa(filt.DA$Feature[filt.DA$pval.adj < 0.05], x = filt.ra)
-      
-      # melt the data
-      DAm <- psmelt(DA.sig)
-      
-      # Add pseudo count
-      pseudocount <- min(DAm$Abundance[DAm$Abundance != 0])
-      
-      # Create plot
-      p.cor <- ggplot(DAm, aes(x = .data[[PDI]], y = Abundance+pseudocount, color = feed_treat)) + 
-        geom_jitter() +
-        geom_smooth(method=lm) +
-        facet_grid(as.formula(paste0("treatment ~",F.LVL)), scales = "free_y", switch = "y") + 
-        scale_y_log10() +
-        scale_x_continuous(name = "Day", breaks = c(0,8,12,16,21)) + #liver: 1.717, 2.931, 0.25   Serum: 21.84, 69.92, 10
-        theme_pubr(border = TRUE) +
-        scale_color_manual(values = params$COL1) +
-        theme(strip.text.x.top = element_text(angle = 90))
-      p.cor
-      print(p.cor)
-      
-      # Save output
-      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,".pdf"), p.cor, device = "pdf", units = "mm", width = 800, height = 300, dpi = 300))
-      suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/Correlation_",SUBNAME,"_",PDI,"_",LVL,".png"), p.cor, device = "png", units = "mm", width = 800, height = 300, dpi = 300))
-
-    } else {
-      print(paste0("No signficance found in filt.p5 in ",PDI," for ",SUBNAME," at ",LVL,"."))
-    }
-  }
-}
-
-# clear the environment and release memory
-rm(list = ls(all.names = TRUE))
-invisible(gc())
-```
-
 # SETTINGS {.tabset .tabset-fade .tabset-pills}
 
 Overview of the packages that was used for this analysis
@@ -6569,7 +6221,9 @@ kbl(pack[order(pack$Package),], row.names = F) %>% kable_classic(lightable_optio
 ```{r parameters, eval=TRUE}
 params <- readRDS("R_objects/comp_params.RDS")
 
-dat <- as.data.frame(params)
+tmp <- unlist(params)
+dat <- data.frame(Parameter = names(tmp), Value = unname(tmp))
 
+
+kbl(dat, row.names = F) %>% kable_classic(lightable_options = "striped")
 ```
-# References

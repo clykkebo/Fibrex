@@ -462,14 +462,14 @@ These subsets include the following (Note: day 20 is excluded for all sets):
 
 Analyses includes ordination analysis (PCoA), PERMANOVA and test for effect from dispersion (betadisper), as well as plotting.
 
-```{r, eval=TRUE, echo=TRUE}
+```{r, eval=FALSE, echo=TRUE}
 params <- readRDS("R_objects/params_betadiv.RDS")
 
 # Define Metrices 
 METRICES <- c("bray","jac","unif","wuf")
 
 # Define Subsets to analyse
-MTRLS <- c("Feces_no20","Feces_no020","Feces_HF","Feces_HF_no0","Feces_HF_d08","Feces_LF","Feces_LF_no0","Feces_LF_d08","Feces_HF-CTRL_d08","Feces_LF-CTRL_d08","Feces_HF-PFOS_d08","Feces_LF-PFOS_d08","Cecum","Cecum_HF","Cecum_LF","Ileum","Ileum_HF","Ileum_LF")
+MTRLS <- c("Feces_no20","Feces_no020","Feces_HF","Feces_HF_no0","Feces_LF","Feces_LF_no0","Cecum","Cecum_HF","Cecum_LF","Ileum","Ileum_HF","Ileum_LF","Feces_HF_d08","Feces_LF_d08","Feces_HF-CTRL_d08","Feces_LF-CTRL_d08","Feces_HF-PFOS_d08","Feces_LF-PFOS_d08") #not used 
 
 # Run loop
 for (MTRL in MTRLS) {
@@ -748,7 +748,9 @@ The following contained code and content for creating Figures for the main artic
 
 ## Figure 6: Faecal Alpha & Beta Diversity
 
-```{r}
+Figure 6 for the main article. Presents alpha- and beta-diversity development over time.
+
+```{r, eval=TRUE, echo=TRUE}
 params <- readRDS("R_objects/Adiv_params.RDS")
 load("scripts/adiv.Rdata")
 
@@ -820,7 +822,9 @@ invisible(gc())
 
 ## Figure A.1: Day 0
 
-```{r}
+Figure A.1 (Appendix). Presents alpha- and beta-diversity for day 0 samples.
+
+```{r, eval=TRUE, echo=TRUE}
 # Load and process Day 0 beta-diversity for both diets
 params <- readRDS("R_objects/params_betadiv.RDS")
 #load("R_objects/bdiv_bray_Feces.RData")
@@ -1064,7 +1068,9 @@ invisible(gc())
 
 ## Figure A.2: ILEUM DIVERSITY
 
-```{r}
+Figure A.2 (Appendix). Presents alpha- and beta-diversity for day 8 and 21 for Ileum samples.
+
+```{r, eval=TRUE, echo=TRUE}
 load("scripts/adiv.Rdata")
 
 load("plots/adiv/alpha_d08/adiv_Ileum_d08.Rdata")
@@ -1146,7 +1152,9 @@ invisible(gc())
 
 ## Figure A.3: CAECUM DIVERSITY
 
-```{r}
+Figure A.3 (Appendix). Presents alpha- and beta-diversity for day 8 and 21 for Cecum samples.
+
+```{r, eval=TRUE, echo=TRUE}
 load("scripts/adiv.Rdata")
 
 load("plots/adiv/alpha_d08/adiv_Cecum_d08.Rdata")
@@ -1227,8 +1235,8 @@ invisible(gc())
 ```
 
 ## Figure A.4: Alternative representations
-
-```{r}
+Figure A.4 (Appendix). Presents alpha- and beta-diversity for day 8 to 21 for Faeces samples.
+```{r, eval=TRUE, echo=TRUE}
 load("plots/bdiv/timeline/Feces_no020/PCoA_plot_Feces_no020.Rdata")
 
 # Call plots

@@ -607,29 +607,6 @@ rm(list = ls(all.names = TRUE)[ls(all.names = TRUE) != "params"])
 invisible(gc())
 ```
 
-### Feces day 20 (not included in presented data)
-```{r}
-# Load parameters and scripts
-params <- readRDS("R_objects/Adiv_params.RDS")
-load("scripts/adiv.Rdata")
-
-# Set variables for subset analysis
-INNER.VAR <- "feed_treat"
-OUTER.VAR <- "feed"
-MTRL <- "Feces"
-DAY <- "d20"
-
-# Test batch effect for subset
-adiv_batch_effect(INNER.VAR, OUTER.VAR, MTRL, DAY)
-
-# Run alpha-diversity analysis and create output data with plot
-adiv_output(INNER.VAR, OUTER.VAR, MTRL, DAY)
-
-# clear the environment and release memory
-rm(list = ls(all.names = TRUE)[ls(all.names = TRUE) != "params"])
-invisible(gc())
-```
-
 ### Feces day 21
 ```{r}
 # Load parameters and scripts
