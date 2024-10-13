@@ -1,6 +1,6 @@
 "","Feature","pval","pval.adj","log2FC","ordering","Method","Kingdom","Phylum","Class","Order","Family","Genus","Species"
-"4","ASV_0005",0.00171184946953887,0.0316165070037984,3.8469841061344,"B_PFOS>A_PFOS","t-test - CLR (ttc)","Bacteria","Firmicutes","Bacilli","Lactobacillales","Lactobacillaceae","Lactobacillus",NA
-"11","ASV_0013",0.000413259572471178,0.0190099403336742,4.79814636857093,"B_PFOS>A_PFOS","t-test - CLR (ttc)","Bacteria","Actinobacteria","Actinobacteria","Bifidobacteriales","Bifidobacteriaceae","Bifidobacterium",NA
-"26","ASV_0046",0.000693583807385495,0.0212699034264885,-3.36196373574746,"A_PFOS>B_PFOS","t-test - CLR (ttc)","Bacteria","Proteobacteria","Deltaproteobacteria","Desulfovibrionales","Desulfovibrionaceae","Bilophila",NA
-"39","ASV_0087",6.63437476417001e-05,0.00610362478303641,-3.93291183242222,"A_PFOS>B_PFOS","t-test - CLR (ttc)","Bacteria","Firmicutes","Erysipelotrichia","Erysipelotrichales","Erysipelotrichaceae","Longicatena",NA
-"75","ASV_0243",0.00171828842411948,0.0316165070037984,-1.91775514363619,"A_PFOS>B_PFOS","t-test - CLR (ttc)","Bacteria","Firmicutes","Bacilli","Bacillales","Staphylococcaceae","Staphylococcus",NA
+"4","ASV_0005",0.00171184946953887,0.0316165070037984,-3.8469841061344,"HF_PFOS>LF_PFOS","t-test - CLR (ttc)","Bacteria","Firmicutes","Bacilli","Lactobacillales","Lactobacillaceae","Lactobacillus",NA
+"11","ASV_0013",0.000413259572471178,0.0190099403336742,-4.79814636857093,"HF_PFOS>LF_PFOS","t-test - CLR (ttc)","Bacteria","Actinobacteria","Actinobacteria","Bifidobacteriales","Bifidobacteriaceae","Bifidobacterium",NA
+"26","ASV_0046",0.000693583807385495,0.0212699034264885,3.36196373574746,"LF_PFOS>HF_PFOS","t-test - CLR (ttc)","Bacteria","Proteobacteria","Deltaproteobacteria","Desulfovibrionales","Desulfovibrionaceae","Bilophila",NA
+"39","ASV_0087",6.63437476417001e-05,0.00610362478303641,3.93291183242222,"LF_PFOS>HF_PFOS","t-test - CLR (ttc)","Bacteria","Firmicutes","Erysipelotrichia","Erysipelotrichales","Erysipelotrichaceae","Longicatena",NA
+"75","ASV_0243",0.00171828842411948,0.0316165070037984,1.91775514363619,"LF_PFOS>HF_PFOS","t-test - CLR (ttc)","Bacteria","Firmicutes","Bacilli","Bacillales","Staphylococcaceae","Staphylococcus",NA

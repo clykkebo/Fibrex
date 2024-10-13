@@ -1,0 +1,6 @@
+"","Feature","pval","pval.adj","log2FC","ordering","Method","Kingdom","Phylum","Class","Order","Family","Genus","Species"
+"2","ASV_0003",0.000693742997802575,0.0133384505168441,-0.736601619234947,"HF_PFOS>LF_PFOS","Log t-test (ltt)","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Prevotellaceae",NA,NA
+"8","ASV_0013",0.000105642917323236,0.00443700252757591,-1.06336819127245,"HF_PFOS>LF_PFOS","Log t-test (ltt)","Bacteria","Actinobacteria","Actinobacteria","Bifidobacteriales","Bifidobacteriaceae",NA,NA
+"14","ASV_0029",0.000952746465488865,0.0133384505168441,0.690039356957143,"LF_PFOS>HF_PFOS","Log t-test (ltt)","Bacteria","Actinobacteria","Actinobacteria","Micrococcales","Micrococcaceae",NA,NA
+"30","ASV_0211",0.00203109471318827,0.021167874507393,4.07173832341008,"LF_PFOS>HF_PFOS","Log t-test (ltt)","Bacteria","Firmicutes","Erysipelotrichia","Erysipelotrichales","Erysipelatoclostridiaceae",NA,NA
+"37","ASV_0345",0.00251998506040393,0.021167874507393,-3.0121205689208,"HF_PFOS>LF_PFOS","Log t-test (ltt)","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Order_Bacteroidales",NA,NA

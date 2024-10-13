@@ -330,9 +330,9 @@ Day 0 samples should have no taxonomic differences between Treatment groups whil
 Testing differential abundance between feeding groups LF = Low fibre, HF = High fibre.
 
 ##### SPECIES
-**TEST METHOD**
 
-```{r d0, eval=TRUE, echo=TRUE,fig.width=10, fig.height=5}
+
+```{r d0, eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
@@ -347,7 +347,7 @@ load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Filter samples (if needed)
 # phy.sp <- subset_samples(phy.sp, material == MTRL)
-if (exists("FEED") == TRUE) {
+  if (exists("FEED") == TRUE) {
   phy.sp <- subset_samples(phy.sp, feed == FEED)
   print(paste0("Data contains type ",FEED," feed."))
 } else {
@@ -365,7 +365,6 @@ if (exists("TREAT") == TRUE) {
 } else {
   print("Data contains all treatment groups.")
 }
-
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
@@ -380,12 +379,14 @@ p.fil
 pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",PDI,"_",LVL,".pdf"))
     p.fil
     dev.off()
+    
 
 ```
+*Result: TTA (t-test)*
 
 **RUN DAtest**
 
-Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
+Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance. This test is also used for remaining analyses in this section.
 
 ```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
@@ -425,10 +426,10 @@ suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/diffplo
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
-
+![Figure](plots/differential_abundance/Feces_d0/diffplot_Feces_d0_feed_Species.png){width="100%"}
 
 ##### GENUS
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -469,25 +470,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -516,9 +498,10 @@ suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/diffplo
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+![Figure](plots/differential_abundance/Feces_d0/diffplot_Feces_d0_feed_Genus.png){width="100%"}
 
 ##### FAMILY
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -559,25 +542,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - Rank (ttr) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttr(filt, predictor = PDI)
 
@@ -606,11 +570,11 @@ suppressMessages(ggsave(paste0("plots/differential_abundance/",SUBNAME,"/diffplo
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
-
+![Figure](plots/differential_abundance/Feces_d0/diffplot_Feces_d0_feed_Family.png){width="100%"}
 
 #### TREATMENT in HF
 ##### SPECIES (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -651,25 +615,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -709,7 +654,7 @@ invisible(gc())
 
 
 ##### GENUS (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -750,25 +695,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -807,7 +733,7 @@ invisible(gc())
 ```
 
 ##### FAMILY (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -848,25 +774,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - Rank (ttr) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -906,7 +813,7 @@ invisible(gc())
 
 #### TREATMENT in LF
 ##### SPECIES (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -947,25 +854,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -1005,7 +893,7 @@ invisible(gc())
 
 
 ##### GENUS (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -1046,25 +934,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -1103,7 +972,7 @@ invisible(gc())
 ```
 
 ##### FAMILY (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -1144,25 +1013,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - Rank (ttr) to analyse the two groups as the optimal test we will use it to calculate differential abundance.
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -1207,10 +1057,10 @@ Significant differential abundances were observed between diets but not between 
 Samples at day 8 are taken 24 hours after last gavage of corn oil (+/- PFOS) and prior to dissection of half the animals.
 
 #### Treatment in LF
-Here we take a look at the differencial abundance driven by PFOS treatment (CTRL vs. PFOS) in LF.
+Here we take a look at the differential abundance driven by PFOS treatment (CTRL vs. PFOS) in LF.
 
 ##### SPECIES (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -1264,9 +1114,11 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
 
 ```
 
+*Result: TTA (t-test)*
+
 **RUN DAtest**
 
-Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
+Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance. This test is also used for remaining analyses in this section.
 
 ```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
@@ -1308,7 +1160,7 @@ invisible(gc())
 
 
 ##### GENUS (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -1349,25 +1201,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -1406,7 +1239,7 @@ invisible(gc())
 ```
 
 ##### FAMILY (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -1447,25 +1280,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -1507,8 +1321,9 @@ invisible(gc())
 
 #### Treatment in HF
 Here we take a look at the differential abundance driven by PFOS treatment (CTRL vs. PFOS) in HF.
+
 ##### SPECIES (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -1548,25 +1363,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -1605,7 +1401,7 @@ invisible(gc())
 
 
 ##### GENUS (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -1646,25 +1442,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filtersummary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -1703,7 +1480,7 @@ invisible(gc())
 ```
 
 ##### FAMILY (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -1744,25 +1521,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filtersummary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -1807,7 +1565,7 @@ invisible(gc())
 Here we investigate the differential abundance driven by feed (No fibre vs. Fibre) in the control treatment group (CTRL).
 
 ##### SPECIES
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -1847,25 +1605,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -1903,9 +1642,10 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
+![Figure](plots/differential_abundance/Feces_d08/diffplot_Feces_d08_CTRL_feed_treat_Species.png){width="100%"}
 
 ##### GENUS
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -1946,25 +1686,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified Log t-test (ltt) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ltt(filt, predictor = PDI)
 
@@ -2002,8 +1723,10 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
+![Figure](plots/differential_abundance/Feces_d08/diffplot_Feces_d08_CTRL_feed_treat_Genus.png){width="100%"}
+
 ##### FAMILY
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -2044,25 +1767,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -2099,12 +1803,14 @@ if (any(filt.p5$pval.adj > 0)) {
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+
+![Figure](plots/differential_abundance/Feces_d08/diffplot_Feces_d08_CTRL_feed_treat_Family.png){width="100%"}
 
 #### Feed in PFOS
 Here we investigate the differential abundance driven by feed (No fibre vs. Fibre) in the PFOS treatment group (PFOS).
 
 ##### SPECIES
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -2144,25 +1850,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -2200,9 +1887,10 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
+![Figure](plots/differential_abundance/Feces_d08/diffplot_Feces_d08_PFOS_feed_treat_Species.png){width="100%"}
 
 ##### GENUS
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -2243,25 +1931,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ltt(filt, predictor = PDI)
 
@@ -2299,8 +1968,10 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
+![Figure](plots/differential_abundance/Feces_d08/diffplot_Feces_d08_PFOS_feed_treat_Genus.png){width="100%"}
+
 ##### FAMILY
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -2341,25 +2012,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ltt(filt, predictor = PDI)
 
@@ -2396,6 +2048,8 @@ if (any(filt.p5$pval.adj > 0)) {
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+
+![Figure](plots/differential_abundance/Feces_d08/diffplot_Feces_d08_PFOS_feed_treat_Family.png){width="100%"}
 
 #### CONCLUSIONS
 Significant differential abundances were observed between diets but not between treatment groups within each feed group on Day 8. 
@@ -2403,10 +2057,10 @@ Significant differential abundances were observed between diets but not between 
 ### DAY 12
 
 #### Treatment in LF
-Here we take a look at the differencial abundance driven by PFOS treatment (CTRL vs. PFOS) in LF.
+Here we take a look at the differential abundance driven by PFOS treatment (CTRL vs. PFOS) in LF.
 
 ##### SPECIES (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -2494,10 +2148,12 @@ if (any(filt.p5$pval.adj > 0)) {
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+*Result: TTA (t-test)*
 
+Having now identified t-test - ALR (tta) to analyse the two groups as the optimal test we will use it to calculate differential abundance. This test is also used for remaining analyses in this section.
 
 ##### GENUS (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -2538,25 +2194,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - RANK (ttr) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttr(filt, predictor = PDI)
 
@@ -2595,7 +2232,7 @@ invisible(gc())
 ```
 
 ##### FAMILY (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -2636,25 +2273,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -2697,7 +2315,7 @@ invisible(gc())
 #### Treatment in HF
 Here we take a look at the differential abundance driven by PFOS treatment (CTRL vs. PFOS) in HF.
 ##### SPECIES (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -2737,25 +2355,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -2795,7 +2394,7 @@ invisible(gc())
 
 
 ##### GENUS (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -2836,25 +2435,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filtersummary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc)  as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -2893,7 +2473,7 @@ invisible(gc())
 ```
 
 ##### FAMILY (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -2934,25 +2514,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filtersummary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -2997,7 +2558,7 @@ invisible(gc())
 Here we investigate the differential abundance driven by feed (No fibre vs. Fibre) in the control treatment group (CTRL).
 
 ##### SPECIES
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -3037,25 +2598,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -3093,9 +2635,10 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
+![Figure](plots/differential_abundance/Feces_d12/diffplot_Feces_d12_CTRL_feed_treat_Species.png){width="100%"}
 
 ##### GENUS
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -3136,25 +2679,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified Log t-test (ltt) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -3191,9 +2715,11 @@ if (any(filt.p5$pval.adj > 0)) {
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+![Figure](plots/differential_abundance/Feces_d12/diffplot_Feces_d12_CTRL_feed_treat_Genus.png){width="100%"}
 
-##### FAMILY
-**TEST METHOD**
+
+##### FAMILY (NO SIGNIFICANCE)
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -3234,25 +2760,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttt(filt, predictor = PDI)
 
@@ -3294,7 +2801,7 @@ invisible(gc())
 Here we investigate the differential abundance driven by feed (No fibre vs. Fibre) in the PFOS treatment group (PFOS).
 
 ##### SPECIES
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -3334,25 +2841,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -3390,9 +2878,11 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
+![Figure](plots/differential_abundance/Feces_d12/diffplot_Feces_d12_PFOS_feed_treat_Species.png){width="100%"}
+
 
 ##### GENUS
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -3433,25 +2923,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -3488,9 +2959,11 @@ if (any(filt.p5$pval.adj > 0)) {
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+![Figure](plots/differential_abundance/Feces_d12/diffplot_Feces_d12_PFOS_feed_treat_Genus.png){width="100%"}
+
 
 ##### FAMILY
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -3531,25 +3004,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ltt(filt, predictor = PDI)
 
@@ -3587,16 +3041,18 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
+![Figure](plots/differential_abundance/Feces_d12/diffplot_Feces_d12_PFOS_feed_treat_Family.png){width="100%"}
+
 #### CONCLUSIONS
 Significant differential abundances were observed between diets but not between treatment groups within each feed group on Day 12. 
 
 ### DAY 16
 
 #### Treatment in LF
-Here we take a look at the differencial abundance driven by PFOS treatment (CTRL vs. PFOS) in LF.
+Here we take a look at the differential abundance driven by PFOS treatment (CTRL vs. PFOS) in LF.
 
 ##### SPECIES (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -3648,15 +3104,8 @@ pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,
     p.fil
     dev.off()
 
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
-filt.DA <- DA.ttc(filt, predictor = PDI)
+filt.DA <- DA.tta(filt, predictor = PDI)
 
 # Evaluate the plot and summary table
 table(filt.DA$pval.adj < 0.05)
@@ -3694,7 +3143,7 @@ invisible(gc())
 
 
 ##### GENUS (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -3735,27 +3184,8 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - RANK (ttr) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
-filt.DA <- DA.ttr(filt, predictor = PDI)
+filt.DA <- DA.tta(filt, predictor = PDI)
 
 # Evaluate the plot and summary table
 table(filt.DA$pval.adj < 0.05)
@@ -3792,7 +3222,7 @@ invisible(gc())
 ```
 
 ##### FAMILY (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -3803,7 +3233,7 @@ DAY <- "d16" #c("d0","d08","d12","d16","d20","d21")
 FEED <- "LF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
+SUBNAME <- "Feces_d16" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -3833,25 +3263,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -3894,18 +3305,18 @@ invisible(gc())
 #### Treatment in HF
 Here we take a look at the differential abundance driven by PFOS treatment (CTRL vs. PFOS) in HF.
 ##### SPECIES (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
-DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
+DAY <- "d16" #c("d0","d08","d12","d16","d20","d21")
 FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
+SUBNAME <- "Feces_d16" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -3934,27 +3345,8 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
-filt.DA <- DA.ttc(filt, predictor = PDI)
+filt.DA <- DA.tta(filt, predictor = PDI)
 
 # Evaluate the plot and summary table
 table(filt.DA$pval.adj < 0.05)
@@ -3992,18 +3384,18 @@ invisible(gc())
 
 
 ##### GENUS (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
-DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
+DAY <- "d16" #c("d0","d08","d12","d16","d20","d21")
 FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
+SUBNAME <- "Feces_d16" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4033,27 +3425,8 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filtersummary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc)  as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
-filt.DA <- DA.ttc(filt, predictor = PDI)
+filt.DA <- DA.tta(filt, predictor = PDI)
 
 # Evaluate the plot and summary table
 table(filt.DA$pval.adj < 0.05)
@@ -4090,18 +3463,18 @@ invisible(gc())
 ```
 
 ##### FAMILY (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
-DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
+DAY <- "d16" #c("d0","d08","d12","d16","d20","d21")
 FEED <- "HF" #c("LF","HF")
 #TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
+SUBNAME <- "Feces_d16" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4131,25 +3504,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filtersummary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -4194,18 +3548,18 @@ invisible(gc())
 Here we investigate the differential abundance driven by feed (No fibre vs. Fibre) in the control treatment group (CTRL).
 
 ##### SPECIES
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
-DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
+DAY <- "d16" #c("d0","d08","d12","d16","d20","d21")
 #FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
+SUBNAME <- "Feces_d16" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4234,25 +3588,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -4289,21 +3624,22 @@ if (any(filt.p5$pval.adj > 0)) {
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+![Figure](plots/differential_abundance/Feces_d16/diffplot_Feces_d16_CTRL_feed_treat_Species.png){width="100%"}
 
 
 ##### GENUS
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
-DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
+DAY <- "d16" #c("d0","d08","d12","d16","d20","d21")
 #FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d21","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
+SUBNAME <- "Feces_d16" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d21","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4333,25 +3669,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified Log t-test (ltt) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -4388,20 +3705,22 @@ if (any(filt.p5$pval.adj > 0)) {
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+![Figure](plots/differential_abundance/Feces_d16/diffplot_Feces_d16_CTRL_feed_treat_Genus.png){width="100%"}
 
-##### FAMILY
-**TEST METHOD**
+
+##### FAMILY (NO SIGNIFICANCE)
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
-DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
+DAY <- "d16" #c("d0","d08","d12","d16","d20","d21")
 #FEED <- "LF" #c("LF","HF")
 TREAT <- "CTRL" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
+SUBNAME <- "Feces_d16" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4431,25 +3750,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttt(filt, predictor = PDI)
 
@@ -4491,18 +3791,18 @@ invisible(gc())
 Here we investigate the differential abundance driven by feed (No fibre vs. Fibre) in the PFOS treatment group (PFOS).
 
 ##### SPECIES
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Species" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
-DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
+DAY <- "d16" #c("d0","d08","d12","d16","d20","d21")
 #FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
+SUBNAME <- "Feces_d16" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4531,25 +3831,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -4586,21 +3867,22 @@ if (any(filt.p5$pval.adj > 0)) {
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+![Figure](plots/differential_abundance/Feces_d16/diffplot_Feces_d16_PFOS_feed_treat_Species.png){width="100%"}
 
 
 ##### GENUS
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Genus" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
-DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
+DAY <- "d16" #c("d0","d08","d12","d16","d20","d21")
 #FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
+SUBNAME <- "Feces_d16" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4630,25 +3912,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -4685,20 +3948,23 @@ if (any(filt.p5$pval.adj > 0)) {
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+![Figure](plots/differential_abundance/Feces_d16/diffplot_Feces_d16_PFOS_feed_treat_Genus.png){width="100%"}
+
+
 
 ##### FAMILY
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
 
 LVL <- "Family" #c("Species","Genus","Family")
 MTRL <- "Feces" #c("Feces","Ileum","Cecum")
-DAY <- "d21" #c("d0","d08","d12","d16","d20","d21")
+DAY <- "d16" #c("d0","d08","d12","d16","d20","d21")
 #FEED <- "LF" #c("LF","HF")
 TREAT <- "PFOS" #c("CTRL","PFOS")
 PDI <- "feed_treat" #c("treatment","feed")
-SUBNAME <- "Feces_d21" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
+SUBNAME <- "Feces_d16" #c("Feces","Feces_LF","Feces_HF","Feces_CTRL","Feces_PFOS","Feces_LF_CTRL","Feces_LF_PFOS","Feces_HF_CTRL","Feces_HF_PFOS",             "Feces_d0","Feces_d08","Feces_d12","Feces_d16","Feces_d20","Feces_d21","Feces_d0d08","Feces_d08d21",             "Ileum","Ileum_LF","Ileum_HF","Cecum","Cecum_LF","Cecum_HF")
 load(paste0("R_objects/Agglomerated_",SUBNAME,".RData"))
 
 # Create sub-folder
@@ -4728,25 +3994,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ltt(filt, predictor = PDI)
 
@@ -4783,6 +4030,9 @@ if (any(filt.p5$pval.adj > 0)) {
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+
+![Figure](plots/differential_abundance/Feces_d16/diffplot_Feces_d16_PFOS_feed_treat_Family.png){width="100%"}
+
 
 #### CONCLUSIONS
 Significant differential abundances were observed between diets but not between treatment groups within each feed group on Day 16. 
@@ -4792,10 +4042,10 @@ Significant differential abundances were observed between diets but not between 
 Samples at day 8 are taken 24 hours after last gavage of corn oil (+/- PFOS) and prior to dissection of half the animals.
 
 #### Treatment in LF
-Here we take a look at the differencial abundance driven by PFOS treatment (CTRL vs. PFOS) in LF.
+Here we take a look at the differential abundance driven by PFOS treatment (CTRL vs. PFOS) in LF.
 
 ##### SPECIES (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -4893,7 +4143,7 @@ invisible(gc())
 
 
 ##### GENUS (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -4934,25 +4184,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - RANK (ttr) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttr(filt, predictor = PDI)
 
@@ -4991,7 +4222,7 @@ invisible(gc())
 ```
 
 ##### FAMILY (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -5032,25 +4263,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -5093,7 +4305,7 @@ invisible(gc())
 #### Treatment in HF
 Here we take a look at the differential abundance driven by PFOS treatment (CTRL vs. PFOS) in HF.
 ##### SPECIES (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -5133,25 +4345,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -5191,7 +4384,7 @@ invisible(gc())
 
 
 ##### GENUS (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -5232,25 +4425,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filtersummary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc)  as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -5289,7 +4463,7 @@ invisible(gc())
 ```
 
 ##### FAMILY (NO SIGNIFICANCE)
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -5330,25 +4504,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filtersummary_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filterplot_",MTRL,"_",DAY,"_",FEED,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.tta(filt, predictor = PDI)
 
@@ -5393,7 +4548,7 @@ invisible(gc())
 Here we investigate the differential abundance driven by feed (No fibre vs. Fibre) in the control treatment group (CTRL).
 
 ##### SPECIES
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -5433,25 +4588,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -5488,10 +4624,11 @@ if (any(filt.p5$pval.adj > 0)) {
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+![Figure](plots/differential_abundance/Feces_d21/diffplot_Feces_d21_CTRL_feed_treat_Species.png){width="100%"}
 
 
 ##### GENUS
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -5532,25 +4669,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified Log t-test (ltt) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -5588,8 +4706,11 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
+![Figure](plots/differential_abundance/Feces_d21/diffplot_Feces_d21_CTRL_feed_treat_Genus.png){width="100%"}
+
+
 ##### FAMILY
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -5630,25 +4751,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.fa, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - CLR (ttc) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttt(filt, predictor = PDI)
 
@@ -5686,11 +4788,14 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
+![Figure](plots/differential_abundance/Feces_d21/diffplot_Feces_d21_CTRL_feed_treat_Family.png){width="100%"}
+
+
 #### Feed in PFOS
 Here we investigate the differential abundance driven by feed (No fibre vs. Fibre) in the PFOS treatment group (PFOS).
 
 ##### SPECIES
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -5730,25 +4835,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.sp, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified t-test - ALR (tta) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -5786,9 +4872,11 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
+![Figure](plots/differential_abundance/Feces_d21/diffplot_Feces_d21_PFOS_feed_treat_Species.png){width="100%"}
+
 
 ##### GENUS
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -5829,25 +4917,6 @@ if (exists("TREAT") == TRUE) {
 # Filter data
 filt <- preDA(data = phy.ge, min.reads = 20, min.samples = 4)
 
-# Test best method 
-filt.test <- testDA(filt, predictor = PDI, effectSize = 10)
-
-# Evaluate the plot and summary table
-sum.fil <- summary(filt.test)
-write.csv(sum.fil, file = paste0("plots/differential_abundance/",SUBNAME,"/filter_summary_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".csv"))
-p.fil <- plot(filt.test)
-p.fil
-pdf(paste0("plots/differential_abundance/",SUBNAME,"/filter_plot_",MTRL,"_",DAY,"_",TREAT,"_",PDI,"_",LVL,".pdf"))
-    p.fil
-    dev.off()
-
-```
-
-**RUN DAtest**
-
-Having now identified LIMMA - CLR (lic) as the optimal test I will use it to calculate differential abundance
-
-```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
 filt.DA <- DA.ttc(filt, predictor = PDI)
 
@@ -5885,8 +4954,11 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
 
+![Figure](plots/differential_abundance/Feces_d21/diffplot_Feces_d21_PFOS_feed_treat_Genus.png){width="100%"}
+
+
 ##### FAMILY
-**TEST METHOD**
+
 
 ```{r , eval=FALSE, echo=TRUE,fig.width=10, fig.height=5}
 params <- readRDS("R_objects/comp_params.RDS")
@@ -5947,7 +5019,7 @@ Having now identified LIMMA - CLR (lic) as the optimal test I will use it to cal
 
 ```{r , eval=FALSE, echo=TRUE, fig.width=10, fig.height=5}
 # Run the selected analysis
-filt.DA <- DA.ltt(filt, predictor = PDI)
+filt.DA <- DA.lic(filt, predictor = PDI)
 
 # Evaluate the plot and summary table
 table(filt.DA$pval.adj < 0.05)
@@ -5982,12 +5054,14 @@ if (any(filt.p5$pval.adj > 0)) {
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+![Figure](plots/differential_abundance/Feces_d21/diffplot_Feces_d21_PFOS_feed_treat_Family.png){width="100%"}
+
 
 #### CONCLUSIONS
 Significant differential abundances were observed between diets but not between treatment groups within each feed group on Day 21. 
 
 # ILEUM & CAECUM
-Here we take a look at the differencial abundance driven by PFOS treatment (CTRL vs. PFOS) in LF.
+Here we take a look at the differential abundance driven by PFOS treatment (CTRL vs. PFOS) in LF.
 
 ##### Check for PFOS-driven DA
 
@@ -6083,6 +5157,8 @@ stat.out
 rm(list = ls(all.names = TRUE))
 invisible(gc())
 ```
+## Conclusion
+No significant differences observed in caecum and ileum.
 
 # ENTEROBACTERIACEAE > GENERA
 
@@ -6199,6 +5275,8 @@ rm(list = ls(all.names = TRUE))
 invisible(gc())
 
 ```
+![Figure](plots/differential_abundance/Feces/diffplot_Feces_Family_Enterobacteriaceae.png){width="100%"}
+![Figure](plots/differential_abundance/Feces/diffplot_Feces_Genus_Enterobacteriaceae.png){width="100%"}
 
 # SETTINGS {.tabset .tabset-fade .tabset-pills}
 

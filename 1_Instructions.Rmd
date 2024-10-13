@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo = TRUE,warning = FALSE, message = FALSE)
 ```
 
 
-This repository contains the code and data necessary to reproduce the complete statistical analysis for the article **"Fibre rich diet increases excretion of perfluorooctane sulfonic acid (PFOS) in male Sprague-Dawley rats"** (doi: ###########). All files and folders should be copied to your local folder to ensure script compliance.
+This repository contains the code and data necessary to reproduce the complete statistical analysis for the article **"Diet rich in soluble dietary fibres increases excretion of perfluorooctane sulfonic acid (PFOS) in male Sprague-Dawley rats"** (doi: [10.1016/j.fct.2024.115041](https://doi.org/10.1016/j.fct.2024.115041)). All files and folders should be copied to your local folder to ensure script compliance.
 
 # Introduction
 
@@ -29,8 +29,6 @@ This repository contains the code and data necessary to reproduce the complete s
  -    gut microbiome diversity and composition, 
  -    gastrointestinal abiotic factors (pH, transit time, short-chain fatty acids), and
  -    quantitative PFOS detection in systemic and excreted samples.
-
-## Project
 
 The FIBREX project is a PFOS exposure experiment focusing on the difference in uptake and wash-out of PFOS between rats given feed with and without dietary fibers. Samples for this analysis are 16S rRNA V3 amplicons from extracted total DNA of feces and luminal samples from ileum and cecum. Fecal samples were collected before exposure start (day 0, n=48) and hereafter at day 8 (n=48), 12 (n=24), 16 (n=24), 20 (n=24) and 21 (n=24). Sampling on day 20 was run as a test of effect of carmine treatment for transit time but has been left out of analyses included in main article as no marked differences were observed between day 20 and 21. Luminal contents were collected at dissections at day 8 (n=24) and 21 (n=24). DNA was sequenced on IonTorrent GSS5 platform and raw data converted to ASVs using cutadapt (Martin 2011) and DADA2 (Callahan et al. 2016) and converted into Phyloseq elements (McMurdie and Holmes 2013). Goal of the analysis is to investigate the impact of soluble dietary fibre, PFOS exposure, and PFOS depuration on the gut microbiota.
 

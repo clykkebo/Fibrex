@@ -1,0 +1,11 @@
+"","Feature","pval","pval.adj","log2FC","ordering","Method","Kingdom","Phylum","Class","Order","Family","Genus","Species"
+"3","ASV_0003",2.82331300939597e-06,0.000129872398432215,-7.07220612621979,"HF_CTRL>LF_CTRL","t-test - CLR (ttc)","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Prevotellaceae","Prevotella",NA
+"4","ASV_0005",0.000401737697373517,0.00527998116548051,-3.4013680414572,"HF_CTRL>LF_CTRL","t-test - CLR (ttc)","Bacteria","Firmicutes","Bacilli","Lactobacillales","Lactobacillaceae","Lactobacillus",NA
+"5","ASV_0006",0.00488341955865205,0.048430514200685,1.82700267484132,"LF_CTRL>HF_CTRL","t-test - CLR (ttc)","Bacteria","Firmicutes","Clostridia","Clostridiales","Order_Clostridiales","Order_Clostridiales",NA
+"27","ASV_0046",0.000397835911549185,0.00527998116548051,3.14099963015089,"LF_CTRL>HF_CTRL","t-test - CLR (ttc)","Bacteria","Proteobacteria","Deltaproteobacteria","Desulfovibrionales","Desulfovibrionaceae","Bilophila",NA
+"38","ASV_0086",0.00036720537087447,0.00527998116548051,-4.21756311966915,"HF_CTRL>LF_CTRL","t-test - CLR (ttc)","Bacteria","Firmicutes","Clostridia","Clostridiales","Ruminococcaceae","Monoglobus",NA
+"46","ASV_0110",8.20651467388329e-07,7.54999349997262e-05,3.76789745419408,"LF_CTRL>HF_CTRL","t-test - CLR (ttc)","Bacteria","Firmicutes","Bacilli","Lactobacillales","Enterococcaceae","Enterococcus",NA
+"52","ASV_0141",0.00526418632616142,0.048430514200685,-2.23905303799346,"HF_CTRL>LF_CTRL","t-test - CLR (ttc)","Bacteria","Firmicutes","Clostridia","Class_Clostridia","Class_Clostridia","Class_Clostridia",NA
+"57","ASV_0152",0.000313783884375849,0.00527998116548051,-4.63663618060017,"HF_CTRL>LF_CTRL","t-test - CLR (ttc)","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Prevotellaceae","Family_Prevotellaceae",NA
+"58","ASV_0154",0.000363044562676853,0.00527998116548051,2.55247219594524,"LF_CTRL>HF_CTRL","t-test - CLR (ttc)","Bacteria","Firmicutes","Clostridia","Clostridiales","Ruminococcaceae","Anaerotruncus",NA
+"85","ASV_0345",0.000799121375218772,0.00918989581501588,-2.73377807163684,"HF_CTRL>LF_CTRL","t-test - CLR (ttc)","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Order_Bacteroidales","Order_Bacteroidales",NA

@@ -1,0 +1,17 @@
+"","Feature","pval","pval.adj","log2FC","ordering","Method","Kingdom","Phylum","Class","Order","Family","Genus","Species"
+"3","ASV_0003",4.79172297958805e-07,4.40838514122101e-05,-6.22413339660705,"HF_CTRL>LF_CTRL","t-test - CLR (ttc)","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Prevotellaceae","Prevotella",NA
+"4","ASV_0005",0.00247958244026105,0.0190101320420014,-3.22132399404132,"HF_CTRL>LF_CTRL","t-test - CLR (ttc)","Bacteria","Firmicutes","Bacilli","Lactobacillales","Lactobacillaceae","Lactobacillus",NA
+"7","ASV_0008",0.00327402478695837,0.0231700215692439,0.976841109344391,"LF_CTRL>HF_CTRL","t-test - CLR (ttc)","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Porphyromonadaceae","Parabacteroides",NA
+"11","ASV_0013",0.00836736052363187,0.0481123230108833,-2.72393433201638,"HF_CTRL>LF_CTRL","t-test - CLR (ttc)","Bacteria","Actinobacteria","Actinobacteria","Bifidobacteriales","Bifidobacteriaceae","Bifidobacterium",NA
+"16","ASV_0024",0.00189073066405987,0.0173947221093508,0.947641389821018,"LF_CTRL>HF_CTRL","t-test - CLR (ttc)","Bacteria","Proteobacteria","Deltaproteobacteria","Desulfovibrionales","Desulfovibrionaceae","Mailhella",NA
+"26","ASV_0046",0.000314075788412643,0.00481582875566053,2.57896122759108,"LF_CTRL>HF_CTRL","t-test - CLR (ttc)","Bacteria","Proteobacteria","Deltaproteobacteria","Desulfovibrionales","Desulfovibrionaceae","Bilophila",NA
+"37","ASV_0086",0.000100023339480199,0.0030673824107261,-4.61485115927827,"HF_CTRL>LF_CTRL","t-test - CLR (ttc)","Bacteria","Firmicutes","Clostridia","Clostridiales","Ruminococcaceae","Monoglobus",NA
+"38","ASV_0087",0.00434851924719273,0.0285759836244093,2.90146544454189,"LF_CTRL>HF_CTRL","t-test - CLR (ttc)","Bacteria","Firmicutes","Erysipelotrichia","Erysipelotrichales","Erysipelotrichaceae","Longicatena",NA
+"40","ASV_0090",0.000643376794526414,0.00792181923878998,1.18000313212774,"LF_CTRL>HF_CTRL","t-test - CLR (ttc)","Bacteria","Proteobacteria","Deltaproteobacteria","Desulfovibrionales","Desulfovibrionaceae","Family_Desulfovibrionaceae",NA
+"44","ASV_0110",0.000212862214750308,0.00391666475140567,3.12535279078642,"LF_CTRL>HF_CTRL","t-test - CLR (ttc)","Bacteria","Firmicutes","Bacilli","Lactobacillales","Enterococcaceae","Enterococcus",NA
+"55","ASV_0152",2.07164727441454e-05,0.00095295774623069,-3.82944951929241,"HF_CTRL>LF_CTRL","t-test - CLR (ttc)","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Prevotellaceae","Family_Prevotellaceae",NA
+"56","ASV_0154",0.000209209344566887,0.00391666475140567,3.0252709612348,"LF_CTRL>HF_CTRL","t-test - CLR (ttc)","Bacteria","Firmicutes","Clostridia","Clostridiales","Ruminococcaceae","Anaerotruncus",NA
+"57","ASV_0161",0.00234330754849214,0.0190101320420014,-3.15749996934168,"HF_CTRL>LF_CTRL","t-test - CLR (ttc)","Bacteria","Firmicutes","Clostridia","Clostridiales","Lachnospiraceae","Frisingicoccus",NA
+"66","ASV_0188",0.000688853846851302,0.00792181923878998,2.70625641319148,"LF_CTRL>HF_CTRL","t-test - CLR (ttc)","Bacteria","Synergistetes","Synergistia","Synergistales","Synergistaceae","Family_Synergistaceae",NA
+"70","ASV_0211",0.000966939331500863,0.00988426872200882,1.53434242200986,"LF_CTRL>HF_CTRL","t-test - CLR (ttc)","Bacteria","Firmicutes","Erysipelotrichia","Erysipelotrichales","Erysipelatoclostridiaceae","Erysipelatoclostridium",NA
+"86","ASV_0345",0.00781336165544174,0.0479219514867094,-1.70687600896666,"HF_CTRL>LF_CTRL","t-test - CLR (ttc)","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Order_Bacteroidales","Order_Bacteroidales",NA

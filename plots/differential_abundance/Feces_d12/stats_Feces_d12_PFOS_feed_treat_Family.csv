@@ -1,0 +1,16 @@
+"","Feature","pval","pval.adj","log2FC","ordering","Method","Kingdom","Phylum","Class","Order","Family","Genus","Species"
+"2","ASV_0002",0.014779552863404,0.0443386585902121,-0.43925941563705,"HF_PFOS>LF_PFOS","Log t-test (ltt)","Bacteria","Firmicutes","Bacilli","Lactobacillales","Lactobacillaceae",NA,NA
+"3","ASV_0003",0.00318457008413497,0.0191074205048098,-0.643534218291815,"HF_PFOS>LF_PFOS","Log t-test (ltt)","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Prevotellaceae",NA,NA
+"7","ASV_0012",0.00137724752775899,0.0131166048542956,0.790881244792584,"LF_PFOS>HF_PFOS","Log t-test (ltt)","Bacteria","Proteobacteria","Gammaproteobacteria","Enterobacterales","Enterobacteriaceae",NA,NA
+"8","ASV_0013",0.00531187556655535,0.024788752643925,-1.09290049335862,"HF_PFOS>LF_PFOS","Log t-test (ltt)","Bacteria","Actinobacteria","Actinobacteria","Bifidobacteriales","Bifidobacteriaceae",NA,NA
+"14","ASV_0029",0.00156150057789233,0.0131166048542956,1.04792743701452,"LF_PFOS>HF_PFOS","Log t-test (ltt)","Bacteria","Actinobacteria","Actinobacteria","Micrococcales","Micrococcaceae",NA,NA
+"16","ASV_0045",0.00818583214814604,0.0312549954747394,-0.220972982620652,"HF_PFOS>LF_PFOS","Log t-test (ltt)","Bacteria","Firmicutes","Clostridia","Clostridiales","Ruminococcaceae",NA,NA
+"24","ASV_0110",0.00012398358163516,0.00520731042867672,1.88359034313797,"LF_PFOS>HF_PFOS","Log t-test (ltt)","Bacteria","Firmicutes","Bacilli","Lactobacillales","Enterococcaceae",NA,NA
+"26","ASV_0143",0.00308192781718014,0.0191074205048098,1.43502656750645,"LF_PFOS>HF_PFOS","Log t-test (ltt)","Bacteria","Firmicutes","Bacilli","Bacillales","Staphylococcaceae",NA,NA
+"29","ASV_0188",0.00593438152209212,0.0249244023927869,1.45893997565383,"LF_PFOS>HF_PFOS","Log t-test (ltt)","Bacteria","Synergistetes","Synergistia","Synergistales","Synergistaceae",NA,NA
+"30","ASV_0211",0.00498482422731633,0.024788752643925,3.47751660128073,"LF_PFOS>HF_PFOS","Log t-test (ltt)","Bacteria","Firmicutes","Erysipelotrichia","Erysipelotrichales","Erysipelatoclostridiaceae",NA,NA
+"32","ASV_0225",0.00113587075599394,0.0131166048542956,1.40055181066374,"LF_PFOS>HF_PFOS","Log t-test (ltt)","Bacteria","Firmicutes","Bacilli","Lactobacillales","Aerococcaceae",NA,NA
+"34","ASV_0249",0.00980974056161817,0.0343340919656636,-2.58260124054058,"HF_PFOS>LF_PFOS","Log t-test (ltt)","Bacteria","Actinobacteria","Coriobacteriia","Coriobacteriales","Atopobiaceae",NA,NA
+"39","ASV_0345",0.0173154956398434,0.0484833877915616,-2.10147262010964,"HF_PFOS>LF_PFOS","Log t-test (ltt)","Bacteria","Bacteroidetes","Bacteroidia","Bacteroidales","Order_Bacteroidales",NA,NA
+"40","ASV_0416",0.000542607830149376,0.0113947644331369,2.29214588206286,"LF_PFOS>HF_PFOS","Log t-test (ltt)","Bacteria","Firmicutes","Bacilli","Lactobacillales","Order_Lactobacillales",NA,NA
+"41","ASV_0511",0.0108239656971013,0.0349697353290965,2.18364583700935,"LF_PFOS>HF_PFOS","Log t-test (ltt)","Bacteria","Firmicutes","Clostridia","Clostridiales","Catabacteriaceae",NA,NA
