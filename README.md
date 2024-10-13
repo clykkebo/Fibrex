@@ -9,7 +9,7 @@ statistical analysis for the article:
 
 **Diet rich in soluble dietary fibres increases excretion of
 perfluorooctane sulfonic acid (PFOS) in male Sprague-Dawley rats** (doi:
-[10.1016/j.fct.2024.115041](https://doi.org/10.1016/j.fct.2024.115041))).
+[10.1016/j.fct.2024.115041](https://doi.org/10.1016/j.fct.2024.115041)).
 
 All files and folders should be copied to your local folder to ensure
 script compliance.
